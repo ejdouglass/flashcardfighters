@@ -38,9 +38,14 @@ export default function App() {
 
   function saveApp() {
     // MIGHT have/want to strip off current alertString, globalPrompt
-    setAppState({...appState, alertString: undefined, globalPrompt: undefined});
+    // depending on when this is called, can also do a backend check to see if we 'want' to have it foist contents upon the API
+    //  ... think this one through before implementing, however, as there may be conditions where force-saving could be really unfortunate :P
+    //  ... alternatively, can do 'periodic saves' OR 'user-directed saves,' both of which would be safer than this useEffect-hooked saving
+
+    // what if we did NOT strip off the alertString? hmmm
+    // setAppState({...appState, alertString: undefined, globalPrompt: undefined});
     let savedAppState = {...appState};
-    savedAppState.alertString = undefined;
+    // savedAppState.alertString = undefined;
     savedAppState.globalPrompt = undefined;
     return localStorage.setItem('flashcardfighterApp', JSON.stringify(savedAppState));
   }
@@ -54,21 +59,19 @@ export default function App() {
   useEffect(() => {
     // here: app init check
     // NOTE: in case of 'new init requirements' (e.g. when I added sessions, schedule, etc.), can check and init here to plug 'gaps' in old appState versions
+
+    // NOTEMORE: this app happily will live offline, but IF we have a token/username on init, we should consider doing a backend 'check-in' for potential updates
+
+    // AH! We can defunct globalPrompt and alertString *here* as desired. Not in saveApp().
     let appData = localStorage.getItem('flashcardfighterApp');
-    if (appData) setAppState(JSON.parse(appData));
+    if (appData) {
+      appData = JSON.parse(appData);
+      if (appData.alertString !== undefined) appData.alertString = undefined;
+      if (appData.globalPrompt !== undefined) appData.globalPrompt = undefined;
+      setAppState(appData);
+    }
     console.log(`BOOT UP! globalPrompt is ${JSON.stringify(appState.globalPrompt)}`)
   }, []);
-
-  // function dumbAlert(e) {
-  //   alert(`I see you see me!`);
-  //   // window.removeEventListener('focusin', dumbAlert);
-  // }
-
-  // // HERE: maybe a funky save-checking situation
-  // useEffect(() => {
-  //   window.addEventListener('focusin', dumbAlert);
-  //   return () => window.removeEventListener('focusin', dumbAlert);
-  // }, []);
 
   useEffect(() => {
     // CHAOS SAVING... not a production-worthy approach, but fine for current dev needs
@@ -78,6 +81,8 @@ export default function App() {
     }
 
     console.log(`Something save-worthy has changed.`);
+    // new Profile creation triggers this useEffect several times almost simultaneously, so maybe building in a lastSave timestamp / check would help
+    // may also blunt the effect of 'stripping away' backend-provided alertString/alertType situations
 
     // console.log(`appState has changed, not first paint currently, so saving app data...`);
     return saveApp();
@@ -91,13 +96,15 @@ export default function App() {
         <button onClick={() => setAppState({...appState, mode: undefined})} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '1rem', fontWeight: '600', fontSize: '1.5rem', borderRadius: '4px', border: 'none'}}>HOME</button>
         <button onClick={() => setAppState({...appState, mode: 'viewDecks'})} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '1rem', fontWeight: '600', fontSize: '1.5rem', borderRadius: '4px', border: 'none'}}>DECKS</button>
         <button onClick={() => setAppState({...appState, mode: 'viewStudySessions'})} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '1rem', fontWeight: '600', fontSize: '1.5rem', borderRadius: '4px', border: 'none'}}>STUDY</button>
+        <div id="userContainer" style={{display: 'flex', justifyContent: 'flex-end', width: '100%', height: '100%', alignItems: 'center'}}>
+          <button onClick={() => setAppState({...appState, mode: 'viewProfile'})} style={{boxSizing: 'border-box', display: 'flex', justifyContent: 'center', alignItems: 'center', width: 'auto', height: '50px', border: '2px solid white', padding: '2rem', fontSize: '1.5rem', fontWeight: '600'}}>{appState?.username ? appState.username : 'Profile'}</button>
+        </div>
       </div>
 
       <div style={{boxSizing: 'border-box', position: 'relative', width: '100%', top: '100px', padding: '1rem'}}>
         <Prompt appState={appState} setAppState={setAppState} />
         <Screen appState={appState} setAppState={setAppState} />
         <Alert alertString={appState.alertString} clearAlert={clearAlert} />
-        
       </div>
     </div>
   )
@@ -106,18 +113,33 @@ export default function App() {
 
 /*
 
-Approaching the end of January. Wrap it up!
+CURRENTLY: building out backend
+Day's Checklist:
+[x] Configure MongoDB for use
+[x] Set up axios route default for the development env
+[_] Build out models
+[_] Build out endpoints for API (user create, user login, user delete; deck update - share/update/delete)
+[_] Test endpoints by creating mechanisms for and then applying Profile Creation, Profile Deletion, Share/Update/Delete Deck
+  -> hm, should we add a 'SHARED' flag to decks? That could be helpful for a few disambiguation purposes
+[_] Add 'public deck browsing' capabilities; consider creating 'universal decks' to test with :P
+[_] 0123 session logic, session ending/review
+
+
+... I've forgotten how I've set SESSIONS up. Just deckRefs, right? So it looks for whatever the current version of various decks are and goes from there.
+
+
+
+February Begins. Almost there!
 BUILD PRIORITY OVERVIEW:
 -- building a basic server would be great to work alongside 'save account'
   - username, password ; save cookie in localStorage ; add functionality to history, add window-wide event listener to check on peekaboo for updates if >5min?
   - alongside user creation, add top-right indication of user (default Guest?)
   - most basic version of 'uploading' and sharing decks (backend modeling required, set up a Mongo)
+-- finalized session logic: 0/1/2/3, session stats, session review
 -- basic tutorial (prompts?), home screen linked to known history, actual history activity to reference
--- 'finalized' 
 -- easy multi-deck deletion?
 -- minor aesthetic overhaul (only a few main pages, so should be 'easy')
   - good time to integrate styled-components
--- finalizing sessions would be ideal: at minimum, user answers
 -- getting it all onto Heroku would be fantastic, then we can test it as a mobile concept as well
 
 

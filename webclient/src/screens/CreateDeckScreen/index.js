@@ -17,8 +17,9 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
         variant: false,
         lastUpdateTime: undefined,
         name: '',
-        tags: '', // for later online searching; not critical to implement yet
+        tags: '', // for later online searching; add when convenient; can also 'derive' from card content, potentially
         description: '',
+        shared: false,
         cards: [],
         style: {}
     });

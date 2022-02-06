@@ -3,6 +3,8 @@ import ViewSingleDeckScreen from '../screens/ViewSingleDeckScreen';
 import StudySessionScreen from '../screens/StudySessionScreen';
 import CreateDeckScreen from '../screens/CreateDeckScreen';
 import ViewDecksScreen from '../screens/ViewDecksScreen';
+import ViewProfileScreen from '../screens/ViewProfileScreen';
+import HomeScreen from '../screens/HomeScreen';
 
 export default function Screen({ appState, setAppState }) {
     const [newCard, setNewCard] = useState({
@@ -22,8 +24,9 @@ export default function Screen({ appState, setAppState }) {
     });
     const cardPromptRef = useRef(null);
 
-    function fireAlert(alertString) {
-        setAppState({...appState, alertString: alertString ? alertString : `RANDOM ALARUM, RANDOM ALARUM!`});
+    function fireAlert(alertString, alertType) {
+        // no support for 'alertType' currently, but it should be safe to start passing it as a variable (or not)
+        setAppState({...appState, alertString: alertString ? alertString : `RANDOM ALARUM, RANDOM ALARUM!`, alertType: alertType || undefined});
     }
 
     function createPrompt() {
@@ -260,45 +263,35 @@ export default function Screen({ appState, setAppState }) {
             )
         }
 
+        case 'viewProfile': {
+            /*
+                This should be a handy place to CREATE a profile (later, with ICON!), UDPATE profile, LOG INTO profile, or DELETE profile.
+
+                If CREATING a profile, should have a way to do username and create password (x2). 
+                If UPDATING, keep low-key track of any changes and enable UPDATE action when applicable.
+                If DELETING, use a prompt to confirm.
+                If LOGGING IN, username and password, plz&ty.
+
+                ... can use 'context clues' of appState to conceivably 'know' when to prompt LOGIN vs CREATION?
+
+                States: 
+                - NOT LOGGED IN
+                - LOGGED IN :P
+                - how to tell? appState.username is undefined
+            */
+            
+            return (
+                <ViewProfileScreen appState={appState} setAppState={setAppState} fireAlert={fireAlert} />
+            )
+        }
+
         case 'homeScreen':
         default: {
             /*
                 Home Screen
             
             */
-            return (
-                <div id="appScreen" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'}}>
-                    <h1>Flashcard Fighters - the APP!</h1>
-                    {appState?.username ? (
-                        <div>
-                            <div>Logged in</div>
-                        </div>
-                    ) : (
-                        <div>
-                            <div>NOT logged in... prime opportunity to say "GET STARTED" or "LOG IN!"</div>
-                            <div>Alternatively or also, can begin the 'tutorial' process here. Tuts tuts tuts</div>
-        
-                        </div>
-                    )}
-
-                    <div>
-                        Hi! This area is reserved for history items. Let's test the power of HISTORY!
-                    </div>
-        
-                    {/* HOME SCREEN MAIN ON: whatchu doin here? */}
-
-                    <button style={{width: '200px', padding: '0.5rem'}} onClick={() => setAppState({...appState, mode: 'viewDecks'})}>View My Decks</button>
-                    <button style={{width: '200px', padding: '0.5rem'}} onClick={() => setAppState({...appState, mode: 'viewStudySessions'})}>View Study Sessions</button>
-                    {/* <button style={{width: '200px', padding: '0.5rem', marginTop: '1rem'}} onClick={() => setAppState({...appState, mode: 'viewNotes'})}>Review Notes</button>
-                    <br /> */}
-                    {/* <button style={{width: '200px', padding: '0.5rem', marginTop: '1rem'}} onClick={() => setAppState({...appState, mode: 'studySession'})}>STUDY TIME!</button>
-                    <br /> 
-                    ... this option will go to live in the 'view sessions' screen by default
-                    ... we'll map out all expected favorites/scheduled sessions somewhere around here instead for the home screen
-                    */}
-                    {/* <button style={{width: '200px', padding: '0.5rem', marginTop: '1rem'}} onClick={() => setAppState({...appState, mode: 'createSchedule'})}>Create Study Schedule</button> */}
-                </div>
-            )
+            return <HomeScreen appState={appState} setAppState={setAppState} />
         }
     }
 
