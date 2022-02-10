@@ -8,15 +8,22 @@ const DeckSchema = new Schema({
     variant: Boolean,
     shared: Boolean,
     lastUpdateTime: Date,
+    lastPush: Date,
     tags: String,
     description: String,
     cards: Array,
     style: Object
 }, { minimize: false });
 
-module.exports = mongoose.model('User', UserSchema);
+module.exports = mongoose.model('Deck', DeckSchema);
 
 /*
+
+    - ownerID is specific to the backend and currently modeled to be checked upon request or specific action
+    - 'shared' is a new variable that, if TRUE, reflects back to the user's decks to indicate that they're currently sharing/updating that deck publicly
+    - tags will come into play shortly for quickly searching relevant decks
+
+
     Deck should reflect the webclient app's decks for easy portability
     ... this should allow a pretty easy 'deck fetch' for users to add 'online' decks to their own
 

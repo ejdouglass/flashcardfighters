@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 
 // maaay want to rename to EditDeckScreen so we can readily double-duty as creation/editing page (since all our functionality lives here anyway)
 export default function CreateDeckScreen({ appState, setAppState , generateRandomID, editingDeck }) {
@@ -50,6 +51,33 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
             return setNewCard({id: undefined, prompt: '', explanation: '', style: {...newCard.style}});
         }
         return alert(`BEEP BOOP. Need a prompt and explanation, please.`);
+    }
+
+    function publishDeck() {
+        // This function should only be callable if the user has an appState.token; 
+        if (appState.token === undefined) return alert(`Gotta create a Profile before you can publish decks online.`);
+
+        // Since this is through a single-deck-editing screen, we can cheerfully only worry about the one deck present here for all uploading/updating considerations
+
+        axios.post('/deck/publish', { token: appState.token, decksToAdd: [{...newDeck}] })
+            .then(res => {
+                // successful response handling here:
+                if (res.data.success) {
+                    // everything went swimmingly
+                    let appStateCopy = {...appState};
+                    appStateCopy.decks[newDeck.id].shared = true;
+                    setNewDeck({...newDeck, shared: true});
+                    if (res.data?.alertString) appStateCopy.alertString = res.data.alertString;
+                    return setAppState({...appStateCopy});
+                } else {
+                    if (res.data?.alertString) return setAppState({...appState, alertString: res.data.alertString});
+                }
+            })
+            .catch(err => alert(`Welp, THAT didn't work, because: ${err}`));
+    }
+
+    function unpublishDeck() {
+
     }
 
     function saveNewDeck() {
@@ -116,6 +144,7 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
                 </div>
 
                 <div style={{display: 'flex', flexDirection: 'row', gap: '1rem'}}>
+
                     <div id="deckPreview" style={{boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '330px', height: '198px', backgroundColor: '#0AF', borderRadius: '5%'}}>
                         <input type='text' value={newDeck.name} style={{fontSize: '1rem', textAlign: 'center'}} autoFocus={newDeck.name.length === 0} placeholder={`Nameless Deck #${Object.keys(appState.decks).length + 1}`} onChange={e => setNewDeck({...newDeck, name: e.target.value})} />
                         <div style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Card Total: {newDeck.cards.length}</div>
@@ -127,6 +156,7 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
 
                     <div id="deckButtonsOne" style={{display: 'flex', flexDirection: 'column'}}>
                         <button onClick={deleteDeck} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>DELETE THIS DECK</button>
+                        <button onClick={publishDeck} disabled={!appState.username} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>PUBLISH THIS DECK</button>
                     </div>
                     
                 </div>
@@ -223,3 +253,11 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
         </div>
     )
 }
+
+
+
+
+/*
+    -- PUBLISH THIS DECK button should be obviously boopable or not, and should change to UPDATE THIS DECK (or similar) once it is successfully shared: true
+
+*/

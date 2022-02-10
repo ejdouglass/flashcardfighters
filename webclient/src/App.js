@@ -114,18 +114,43 @@ export default function App() {
 /*
 
 CURRENTLY: building out backend
-Day's Checklist:
+Final Week's Checklist:
 [x] Configure MongoDB for use
 [x] Set up axios route default for the development env
-[_] Build out models
-[_] Build out endpoints for API (user create, user login, user delete; deck update - share/update/delete)
+[x] Build out models - User, Deck
+[_] Build out endpoints for API (user create, user login, user delete, user add deck(s) from backend; deck add/update/fetch)
+[x] Add allPublicDecks object in server.js, created upon server loading and updated appropriately through routes
 [_] Test endpoints by creating mechanisms for and then applying Profile Creation, Profile Deletion, Share/Update/Delete Deck
   -> hm, should we add a 'SHARED' flag to decks? That could be helpful for a few disambiguation purposes
+  -> when 'sharing' a deck successfully, we'll change 'shared' to true, indicating the status of the deck
+  -> 'shared' is a low-key mirror to 'variant,' where one indicates your deck going online, the other indicating a deck that came from online
 [_] Add 'public deck browsing' capabilities; consider creating 'universal decks' to test with :P
 [_] 0123 session logic, session ending/review
+[_] Basic tuts/guides/how-to-use info
+[_] Rejigger responsiveness and scalability, especially in the cards themselves, to allow longer-form content
+[_] Add history object... define 'history moments,' as well as achievements key (or whatever we want to call it)
+
+
+... hm, should add a 'Publish Changes' button to decks, so that 'shared decks' can update properly but NOT on-the-fly like they do in the client
+
+
+... ERROR, SORT OF: there's no mechanism whereby 'shared' decks are reset properly if I, say, use my ADMIN POWERS to wipe the DB decks after sharing :P
+  -> possible fix: on app load, pull out all decks into a live server variable; upon login or other 'refresh,' can do a quick check against allDecks obj
+  -> this would require that both the allDecks obj AND the DB are updated properly in all cases, so be mindful of that if changing in that direction
+  -> note this would somewhat simplify 'browse backend decks,' since we'd be able to just parse that object for our searches
+  -> ok, this is starting to sound pretty solid, gonna add it above
+
+... NOTE: 'once you put a deck online, you can remove it, but anyone that grabbed a copy gets to keep that copy'
+... make sure lastUpdateTime and such for decks is live
+... for 'publish decks,' can add a 'multi-deck selection' on Decks screen where user can DELETE or, if logged in, PUBLISH
 
 
 ... I've forgotten how I've set SESSIONS up. Just deckRefs, right? So it looks for whatever the current version of various decks are and goes from there.
+
+... later on, it'd be neat to be able to pop onto others' profiles to see all their shared decks, maybe their activity, write comments, etc.
+... this would be great for lessons/curricula/etc.
+
+... I appear to mostly be using tokens as a quick-and-dirty way to pass username and id to the backend, rather than actual auth-relevant actions. :P
 
 
 
