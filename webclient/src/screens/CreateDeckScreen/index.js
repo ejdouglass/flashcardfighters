@@ -20,7 +20,7 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
         name: '',
         tags: '', // for later online searching; add when convenient; can also 'derive' from card content, potentially
         description: '',
-        shared: false,
+        published: false,
         cards: [],
         style: {}
     });
@@ -59,16 +59,14 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
 
         // Since this is through a single-deck-editing screen, we can cheerfully only worry about the one deck present here for all uploading/updating considerations
 
+        // NOTE: id may not be defined yet, which... causes issues, it seems? Maybe? Maybe not? Testing...
         axios.post('/deck/publish', { token: appState.token, decksToAdd: [{...newDeck}] })
             .then(res => {
                 // successful response handling here:
+                console.log(`DECK PUBLISH DATA RETURN FROM API: ${JSON.stringify(res.data)}`);
                 if (res.data.success) {
-                    // everything went swimmingly
-                    let appStateCopy = {...appState};
-                    appStateCopy.decks[newDeck.id].shared = true;
-                    setNewDeck({...newDeck, shared: true});
-                    if (res.data?.alertString) appStateCopy.alertString = res.data.alertString;
-                    return setAppState({...appStateCopy});
+                    // we previously re-set newDeck here; decide if there was a good reason for that, since the multiple settings disrupted the appState
+                    return setAppState(res.data.userData);
                 } else {
                     if (res.data?.alertString) return setAppState({...appState, alertString: res.data.alertString});
                 }

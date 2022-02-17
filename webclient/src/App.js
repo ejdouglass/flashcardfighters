@@ -87,7 +87,7 @@ export default function App() {
     // console.log(`appState has changed, not first paint currently, so saving app data...`);
     return saveApp();
 
-  }, [appState.cards, appState.decks, appState.mode, appState.sessions, appState.history, appState.historyLog]);
+  }, [appState.decks, appState.mode, appState.sessions, appState.history, appState.historyLog]);
 
   return (
     <div>
@@ -114,24 +114,40 @@ export default function App() {
 /*
 
 CURRENTLY: building out backend
-Final Week's Checklist:
-[x] Configure MongoDB for use
-[x] Set up axios route default for the development env
-[x] Build out models - User, Deck
-[_] Build out endpoints for API (user create, user login, user delete, user add deck(s) from backend; deck add/update/fetch)
-[x] Add allPublicDecks object in server.js, created upon server loading and updated appropriately through routes
-[_] Test endpoints by creating mechanisms for and then applying Profile Creation, Profile Deletion, Share/Update/Delete Deck
-  -> hm, should we add a 'SHARED' flag to decks? That could be helpful for a few disambiguation purposes
-  -> when 'sharing' a deck successfully, we'll change 'shared' to true, indicating the status of the deck
-  -> 'shared' is a low-key mirror to 'variant,' where one indicates your deck going online, the other indicating a deck that came from online
-[_] Add 'public deck browsing' capabilities; consider creating 'universal decks' to test with :P
+Final Checklist:
+[_] Build out all projected endpoints for API (user create, user login, user delete, user add deck(s) from backend; deck add/update/fetch)
+  - current: deck/update
+
 [_] 0123 session logic, session ending/review
-[_] Basic tuts/guides/how-to-use info
 [_] Rejigger responsiveness and scalability, especially in the cards themselves, to allow longer-form content
 [_] Add history object... define 'history moments,' as well as achievements key (or whatever we want to call it)
+[_] Basic tuts/guides/how-to-use info, maximum user FRIENDLINESS
+[_] Prettify, including responsiveness considerations across mobile formats
+..
+[x] Add 'public deck browsing' capabilities
 
 
-... hm, should add a 'Publish Changes' button to decks, so that 'shared decks' can update properly but NOT on-the-fly like they do in the client
+LIL FIXES/ADJUSTMENTS:
+[_] If the user attempts to publish something that's already published and not update-worthy, kick out before running deck-adding code in server
+[_] consolidate the 'search for decks' bar on the Decks page
+[_] should add a 'Publish Changes' button to decks, so that 'shared decks' can update properly but NOT on-the-fly like they do in the client
+[_] we should probably NOT allow empty decks to be published :P
+[_] axios error handling is currently pretty clumsy in all cases
+[_] forms where appropriate; offhand, 'create new profile' doesn't respond to [Enter/Return] properly
+[_] Search Public Decks should autoFocus on the search field when selected
+
+
+RUH ROH?
+[_] Publishing decks still doesn't provide any feedback NOR does it properly show deck.published === true results
+[_] Local deletion of decks does NOT properly let the backend know... this is particularly pertinent for Variant Decks
+[_] 'downloaded from public' deck are getting the 'shared' flag automatically set, but it's likely being misapplied, since that user didn't necessarily share it
+  - probably have to take a look at the logic of 'shared: true' and ensure it ONLY applies to the client, not as a deck variable
+[_] 'Delete This Deck' probably should NOT appear before the deck is actually created :P
+..
+[x] logging out and logging back in 'resets' the 'shared' flag
+[x] during deck deletion, prompt remains if the user hits YES, only disappears upon NAH
+[x] Decks that were added to the user from the public repo DISINTEGRATE upon logout
+
 
 
 ... ERROR, SORT OF: there's no mechanism whereby 'shared' decks are reset properly if I, say, use my ADMIN POWERS to wipe the DB decks after sharing :P

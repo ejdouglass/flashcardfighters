@@ -39,6 +39,16 @@ export default function ViewProfileScreen({ appState, setAppState, fireAlert }) 
             .catch(err => console.log(`Error creating new user: ${err}`));
     }
 
+    function deleteProfile() {
+        // THIS: probably actually handled by the Prompt component; this is definitely a prompt-worthy decision :P
+        return setAppState({...appState, globalPrompt: {
+            echo: `Are you CERTAIN you wish to delete this profile? This can't be undone.`,
+            type: 'yn',
+            event: 'deleteProfile',
+            resolved: false
+        }});
+    }
+
     function logOut() {
         // clear localStorage, reset appState
         localStorage.removeItem('flashcardfighterApp');
@@ -46,7 +56,6 @@ export default function ViewProfileScreen({ appState, setAppState, fireAlert }) 
             username: undefined,
             alertString: ``,
             globalPrompt: undefined,
-            cards: {}, // deprecating this
             decks: {},
             sessions: {},
             mode: undefined,
@@ -78,6 +87,7 @@ export default function ViewProfileScreen({ appState, setAppState, fireAlert }) 
                     <h3 style={{margin: '0'}}>Here is where we can customize some Profile Specs, Soon.</h3>
                     <h3 style={{margin: '0'}}>Redoing password and such comes to mind. :P</h3>
                     <button onClick={logOut} style={{padding: '0.5rem 1rem', fontSize: '1.1rem', fontWeight: '600'}}>Log On Out</button>
+                    <button onClick={deleteProfile} style={{padding: '0.5rem 1rem', fontSize: '1.1rem', fontWeight: '600'}}>DELETE PROFILE</button>
                     
                 </>
 

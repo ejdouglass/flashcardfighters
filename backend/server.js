@@ -40,14 +40,34 @@ function craftAccessToken(username, id) {
     return jwt.sign({ username: username, id: id }, process.env.SECRET, { expiresIn: '7d' });
 }
 
+function loadUser(userID) {
+    // this function is only intended to return an up-to-date DB object copy of the given User by id
+    User.findOne({ id: userID })
+    .then(searchResult => {
+        if (searchResult === null) {
+            return console.log(`No such user found. 406 error reported.`);
+        } else {
+            // console.log(`fetchUserInfo fxn called for ID ${userID} and found this user: ${JSON.stringify(searchResult)}`);
+            searchResult.appData = JSON.parse(searchResult.appData);
+            searchResult.token = craftAccessToken(searchResult.username, searchResult.id);
+            return JSON.parse(JSON.stringify(searchResult));
+        }
+    })
+    .catch(err => {
+        console.log(`Someone had some difficulty logging in with a token: ${err}`);
+        res.status(406).json({type: `failure`, echo: `Something went wrong logging in with these credentials.`});
+    })
+}
+
 function saveUser(user) {
-    // a ported fxn from chatventure; will require adjustment to use here
-    const filter = { name: user.username };
+    // this function receives a full User object and updates the DB with that information
+    user.appData = JSON.stringify(user.appData);
+    const filter = { id: user.id };
     const update = { $set: user };
     const options = { new: true, useFindAndModify: false };
     User.findOneAndUpdate(filter, update, options)
         .then(updatedResult => {
-            console.log(`${updatedResult.name} has been saved and updated in the database.`);
+            console.log(`${updatedResult.username} has been saved and updated in the database.`);
 
         })
         .catch(err => {
@@ -261,41 +281,64 @@ app.post('/user/add_deck', (req, res, next) => {
     // just realized that lastUpdateTime will change every time the user changes their cloned/borrowed deck, so checking for other-user 'deck updates' becomes tricky
     // ok, just added 'lastPush' Date to the Deck model, and that will serve as the 'backend change timestamp' variable
     // we can decide later if we want users to be able to 'publish' a deck that is variant: true
-
-    // anyway, we'll use the user's token to verify their identity, then we'll need an array of decks' ids
-    // because of the 'small-ish' size of the app, we'll try to get away with just sending fresh appData down from the user's backend-modified state 
-
     
+    // IF a token is applied, do the proper changes/saving for the user back here; otherwise, just pass back an array of full decks for them, marking them as variants
+
+    const { token, deckID } = req.body;
+    let targetDeck = allPublicDecks[deckID];
+    targetDeck.variant = true;
+    if (token !== undefined) {
+        // crack the token open and handle backend user update(s) so deck-adding persists properly
+        const decodedToken = jwt.verify(token, process.env.SECRET);
+        const { username, id } = decodedToken;
+
+        User.findOne({ username, username, id: id })
+        .then(searchResult => {
+            if (searchResult === null) {
+                return console.log(`No such user found. 406 error reported.`);
+            } else {
+                let userCopy = JSON.parse(JSON.stringify(searchResult));
+                userCopy.appData = JSON.parse(userCopy.appData);
+                userCopy.appData.decks[targetDeck.id] = targetDeck;
+                saveUser(userCopy);                
+            }
+        })
+        .catch(err => {
+            console.log(`Someone had some difficulty logging in with a token: ${err}`);
+            res.status(406).json({type: `failure`, echo: `Something went wrong logging in with these credentials.`});
+        })        
+
+        // ... it'd be helpful to have a quicker way to find and update a user for here and elsewhere
+    }
+
+    // HERE: cheerfully pass down the deck for the user
+    // ... actually let's set it to variant true, just in case
+
+    // NOTE: make sure the client lets the user know the process was successful; no need to attach that here
+    res.status(200).json({deck: targetDeck});
+
 
 });
 
-/*
-    DECK routing sxn
+app.post('/user/delete', (req, res, next) => {
+    // THIS: delete the user's account
+    /*
+        Assuming the client double-checks with the user that they're absolutely certain, we adjust the DB to remove the entry, then
+            send down a JSON response that prompts the client to delete the associated localStorage and 'reset' the app for that client
 
-    deck/add
-    deck/delete
-    deck/update
-
-    all decks have a name (which can change) and an id (which is designed to be unique, though we don't 'guarantee' that yet)
-    -- so the id will be the filter/search criterion, and we're good to go
-
-
-    DECK MODEL REFERENCE:
-        const DeckSchema = new Schema({
-            name: {type: String, required: true},
-            id: {type: String, required: true},
-            ownerID: String,
-            variant: Boolean,
-            shared: Boolean,
-            lastUpdateTime: Date,
-            lastPush: Date,
-            tags: String,
-            description: String,
-            cards: Array,
-            style: Object
-        }, { minimize: false });    
-*/
-
+        We can also generate periodic 'backups' for safety and recovery purposes, although that's not as critical here
+    */
+    // 
+    let { token } = req.body;
+    const decodedToken = jwt.verify(token, process.env.SECRET);
+    const { id } = decodedToken;
+    User.findOneAndDelete({ id: id })
+        .then(result => {
+            console.log(`Deleted a user. BLOOP.`);
+            return res.status(200).json({success: true});
+        })
+        .catch(err => console.log(`Error deleting a user: ${err}`));
+});
 
 
 app.post('/deck/publish', (req, res, next) => {
@@ -327,53 +370,102 @@ app.post('/deck/publish', (req, res, next) => {
 
     // ideally, we have an array of decksToAdd, even if the array is length 1, for the forEach below
 
-    decksToAdd.forEach((deckObj, index) => {
-        // inquire in gentle fashion @ the DB via model for each deck
-        Deck.findOne({ id: deckObj.id })
-            .then(searchResult => {
-                if (searchResult === null) {
-                    console.log(`A new deck is requested to be added to the Database. Does not exist yet, so we can happily add it for the user.`);
+    // HERE: we'll fetch the requesting User, and then when all's done, the wrapUp can save them and then we pass down their new 'self'
+    // ensure we're on the correct 'mode' so it doesn't feel weird on the client side
+    // let publishingUserCopy = loadUser(id);
+    // publishingUserCopy.token = token;
+    // console.log(`HOI! Did a loadUser fxn call. We now have this individual: ${JSON.stringify(publishingUserCopy)}`);
 
-                    let newDBDeck = new Deck({
-                        ...deckObj,
-                        ownerID: id,
-                        shared: true,
-                        lastPush: new Date()
-                    });
+    User.findOne({ id: id })
+        .then(userSearchResult => {
+            if (userSearchResult === null) {
+                return console.log(`No such user found. 406 error reported.`);
+            } else {
+                // console.log(`fetchUserInfo fxn called for ID ${userID} and found this user: ${JSON.stringify(userSearchResult)}`);
+                let publishingUserCopy = JSON.parse(JSON.stringify(userSearchResult));
+                publishingUserCopy.appData = JSON.parse(publishingUserCopy.appData);
+                // NOTE: this is not the best way to create a 'new' token for the user; revisit
+                publishingUserCopy.appData.token = craftAccessToken(publishingUserCopy.username, publishingUserCopy.id);
 
-                    newDBDeck.save()
-                        .then(freshDeck => {
-                            console.log(`Successfully saved Deck: ${freshDeck.name}.`);
-                            allPublicDecks[freshDeck.id] = freshDeck;
-                            successfulDeckUploadCount += 1;
-                            console.log(`Successful Deck Upload Count should be plus one from before, and is now ${successfulDeckUploadCount}.`);
-                            wrapItUp(index, decksToAdd.length);
+                // this is a string... it should be an object. That's a whoops.
+                console.log(`The user's appData is now of type ${typeof publishingUserCopy.appData}`);
+
+
+                decksToAdd.forEach((deckObj, index) => {
+                    // inquire in gentle fashion @ the DB via model for each deck
+                    Deck.findOne({ id: deckObj.id })
+                        .then(searchResult => {
+                            if (searchResult === null) {
+                                console.log(`A new deck is requested to be added to the Database. Does not exist yet, so we can happily add it for the user.`);
+            
+                                // ADD: updating user's decks to add 'shared: true'
+            
+                                let newDBDeck = new Deck({
+                                    ...deckObj,
+                                    ownerID: publishingUserCopy.id,
+                                    lastPush: new Date()
+                                });
+            
+                                newDBDeck.save()
+                                    .then(freshDeck => {
+                                        // 
+                                        successfulDeckUploadCount += 1;
+                                        publishingUserCopy.appData.decks[freshDeck.id] = freshDeck;
+                                        publishingUserCopy.appData.decks[freshDeck.id].published = true;
+                                        publishingUserCopy.appData.alertString = `${successfulDeckUploadCount} deck${successfulDeckUploadCount > 1 ? 's' : ''} added to the Public Online Repository!`
+                                        console.log(`Successfully saved Deck: ${freshDeck.name}.`);
+                                        allPublicDecks[freshDeck.id] = freshDeck;
+                                        wrapItUp(index, decksToAdd.length, publishingUserCopy);
+                                    })
+                                    .catch(err => {
+                                        // we get this error on the REGULAR. HRM.
+                                        res.json({success: false, alertString: `Something went wrong attempting to save the deck to the public repository: ${JSON.stringify(err)}`});
+                                    })
+                            } else {
+                                console.log(`Server is in 'deck already exists' mode. User's appData is of type ${typeof publishingUserCopy.appData}`)
+                                // This deck already exists in the DB! We'll sweepingly reject for now, but later we can do an id check for more specific messaging/next steps
+                                // res.json({success: false, alertString: `That Deck has already been uploaded.`, alertType: 'error'});
+                                publishingUserCopy.appData.alertString = `That deck has already been uploaded! Later you can update it, perhaps, if you're the owner.`;
+                                console.log(`Someone tried to upload a deck that already exists, so we're ignoring it for now. FeedbackMessage is now: ${feedbackMessage}`);
+                                wrapItUp(index, decksToAdd.length, publishingUserCopy);
+                                // AMENDED: this section currently can't really do anything meaningful due to being in a loop, potentially sending multiple headers back
+                            }
+            
+                            // ah! we can just check to see if we're at the end of the array in question, and then output here, ezpz?
+            
                         })
                         .catch(err => {
-                            res.json({success: false, alertString: `Something went wrong attempting to save the deck to the public repository: ${JSON.stringify(err)}`});
-                        })
-                } else {
-                    // This deck already exists in the DB! We'll sweepingly reject for now, but later we can do an id check for more specific messaging/next steps
-                    // res.json({success: false, alertString: `That Deck has already been uploaded.`, alertType: 'error'});
-                    feedbackMessage = `That deck has already been uploaded! Later you can update it, perhaps, if you're the owner.`;
-                    console.log(`Someone tried to upload a deck that already exists, so we're ignoring it for now. FeedbackMessage is now: ${feedbackMessage}`);
-                    wrapItUp(index, decksToAdd.length);
-                    // AMENDED: this section currently can't really do anything meaningful due to being in a loop, potentially sending multiple headers back
-                }
+                            console.log(err);
+                            res.json({sucess: false, alertString: JSON.stringify(err)});
+                        });
+                });
 
-                // ah! we can just check to see if we're at the end of the array in question, and then output here, ezpz?
 
-            })
-            .catch(err => {
-                console.log(err);
-                res.json({sucess: false, alertString: JSON.stringify(err)});
-            });
-    });
+            }
+        })
+        .catch(err => {
+            console.log(`Someone had some difficulty logging in with a token: ${err}`);
+            res.status(406).json({type: `failure`, echo: `Something went wrong logging in with these credentials.`});
+        })
 
-    function wrapItUp(index, length) {
+
+    // !MHR
+
+    // ISSUE: it DOES save, but I'm not sure what, if anything, is getting back down to the user
+    // the WRAPUP ENGAGED -does- fire, though, so... that's... something?
+    // let's log the appData, and then check what the client is or isn't receiving
+    function wrapItUp(index, length, user) {
         if (index === length - 1) {
             // Should only fire this success header and response when all the async shenanigans are good to go
-            res.status(200).json({success: true, alertString: feedbackMessage.length > 0 ? feedbackMessage : `${successfulDeckUploadCount} deck${successfulDeckUploadCount > 1 ? 's' : ''} added to the Public Online Repository!`});
+            // HERE: final userSave, then pass down to client for updating
+            console.log(`WRAPUP ENGAGED. We're hopefully sending down the user's appData which is of type ${typeof user.appData}`);
+            console.log(`appData for token is ${user.appData.token} ... username is ${user.appData.username}`);
+            user.appData.mode = 'viewDecks';
+            user.appData.username = user.username;
+            console.log(`Whoops, forgot that username is not, by default, in the userData. Now user.userData.username is ${user.appData.username}`);
+            // turns out the userData object is attached 
+            res.status(200).json({success: true, userData: user.appData, alertString: user.appData.alertString});
+            return saveUser(user);
         }        
     }
 
@@ -399,6 +491,19 @@ app.post('/deck/fetch', (req, res, next) => {
     // actually, under the new allPublicDecks concept, we could do a pretty quick query style here
     // ok!
     let { deckSearchString } = req.body;
+
+    if (deckSearchString.trim() === '*') {
+        // semi-secret shenanigans to grab all current public decks
+        let allTheDecks = [];
+        Object.keys(allPublicDecks).forEach(deckID => allTheDecks.push({
+            id: deckID,
+            name: allPublicDecks[deckID].name,
+            description: allPublicDecks[deckID].description,
+            cardTotal: allPublicDecks[deckID].cards.length
+        }));
+        return res.status(200).json({success: true, deckResultsArray: allTheDecks});
+    }
+
     let deckSearchArray = deckSearchString.split(',').map(searchTerm => searchTerm.trim()).map(trimmedTerm => trimmedTerm.toLowerCase());
     // since we're LISTING the decks in the client, the client can handle 'marking' duplicates/already-'owned' decks for us
 
@@ -413,16 +518,19 @@ app.post('/deck/fetch', (req, res, next) => {
     });
     // now we have deckResults with a bunch of applicable deckID's we want, ideally, so we can array-ify it for the user
     let deckResultsArray = []; 
+    // we can consider 'crediting' the author, as well, and then listing the author in the client as well
     Object.keys(deckResults).forEach(deckID => deckResultsArray.push({
         id: deckID,
         name: allPublicDecks[deckID].name,
         description: allPublicDecks[deckID].description,
-        cardTotal: allPublicDecks[deckID].cards.length
+        cardTotal: allPublicDecks[deckID].cards.length,
+        lastPush: allPublicDecks[deckID].lastPush
     }));
 
     console.log(`After performing an all-decks search, we have ${deckResultsArray.length} total hits, looking like this: ${JSON.stringify(deckResultsArray)}`);
 
     // final step: pass down an array of simplified deck objects to the user (id, name, description, tags) for them to interact with
+    res.status(200).json({success: true, deckResultsArray: deckResultsArray});
     
 });
 

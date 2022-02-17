@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 export default function Prompt({ appState, setAppState }) {
     // const [userInput, setUserInput] = useState(undefined);
@@ -11,8 +12,32 @@ export default function Prompt({ appState, setAppState }) {
 
                 let allDecksCopy = {...appState.decks};
                 delete allDecksCopy[appState.globalPrompt.target];
-                return setAppState({...appState, decks: {...allDecksCopy}, mode: 'viewDecks'});
+                return setAppState({...appState, decks: {...allDecksCopy}, mode: 'viewDecks', globalPrompt: undefined});
             }
+
+            case 'deleteProfile': {
+                // axios time! we're expected to pass the token back for this
+                if (userInput === 'n') return setAppState({...appState, globalPrompt: undefined});
+
+                axios.post('/user/delete', { token: appState.token })
+                    .then(() => {
+                        localStorage.removeItem('flashcardfighterApp');
+                        setAppState({
+                            username: undefined,
+                            alertString: `You have successfully deleted your User Profile.`,
+                            globalPrompt: undefined,
+                            decks: {},
+                            sessions: {},
+                            mode: undefined,
+                            currentDeckId: undefined,
+                            currentModeTargetID: undefined,
+                            schedule: {},
+                            history: {}            
+                        });                        
+                    })
+                    .catch(err => alert(`Deletion attempt received an error: ${err}`));
+            }
+
             default: return;
         }
     }
@@ -58,5 +83,10 @@ export default function Prompt({ appState, setAppState }) {
     - TARGET is the target of the event (such as deletion or change); when paired with EVENT, we should have enough information to enact the user's intention
         note that we can have an event of DeleteDeck and a separate event of DeleteMultipleDecks, which would have a string ID and array of string IDs as target(s), respectively
     - RESOLVED is true/false, defaults to false; upon changing to TRUE, upon user's successful input, prompt resolves
+
+
+
+    ... idle thought, but we could have TYPE include 'multiple_choice'/'mc' and then have a separate variable 'inputOptions' as an array
+        - that would require some deeper thought on the handling of potentially amorphous inputOption values and results, but would be pretty handy
 
 */

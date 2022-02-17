@@ -5,6 +5,7 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
     const [deckSearch, setDeckSearch] = useState('');
     const [onlineDeckSearch, setOnlineDeckSearch] = useState('');
     const [viewOnlineDecks, setViewOnlineDecks] = useState(false);
+    const [searchResultsArray, setSearchResultsArray] = useState([]);
 
 
     function viewDeck(deckId) {
@@ -13,11 +14,29 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
 
     function performOnlineSearch(e) {
         e.preventDefault();
+        // HERE: maybe engage a "searching decks" feedback of some sort somewhere
         axios.post('/deck/fetch', { deckSearchString: onlineDeckSearch })
             .then(res => {
-                alert(`Received response data: ${JSON.stringify(res.data)}`);
+                setSearchResultsArray(res.data.deckResultsArray);
             })
             .catch(err => console.log(err));
+    }
+
+    function addPublicDeck(id) {
+        /*
+            ADDITIONAL CONSIDERATIONS:
+            -- if the user already has the deck in their collection
+            -- what if the user wants to UPDATE their decks?
+            -- hm, maybe a separate UPDATE CHECK functionality from the Decks screen
+        */
+        if (appState?.decks[id]?.name) return alert(`You already have that deck in your collection. Although maybe it needs an update? We should have a warning for that.`);
+        axios.post('/user/add_deck', { token: appState?.token, deckID: id })
+            .then(res => {
+                let allDecksCopy = {...appState.decks};
+                allDecksCopy[id] = res.data.deck;
+                setAppState({...appState, decks: allDecksCopy, alertString: `Successfully added ${res.data.deck.name} to your decks. I hope.`});
+            })
+            .catch(err => console.log(`An error in retrieving a public deck has occurred: ${err}`));
     }
 
 
@@ -46,19 +65,24 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
             <div id='decklistcontainer' style={{display: 'flex', width: 'calc(100% - 2rem)', minHeight: '400px', gap: '1rem', flexWrap: 'wrap', padding: '1rem', backgroundColor: 'gray'}}>
 
                 {viewOnlineDecks ? (
-                    <>
-                        <form onSubmit={performOnlineSearch}>
+                    <div style={{display: 'flex', flexDirection: 'column', width: '100%', gap: '1rem', boxSizing: 'border-box'}}>
+                        <form style={{display: 'flex', gap: '1rem'}} onSubmit={performOnlineSearch}>
                             <input type='text' value={onlineDeckSearch} onChange={e => setOnlineDeckSearch(e.target.value)} style={{padding: '0.5rem 1 rem', fontSize: '1rem'}} placeholder={`Enter Search Term(s)`} />
                             <button type='submit'>Search!</button>
                         </form>
+                        <div style={{display: 'flex', width: '100%', flexDirection: 'column', gap: '1rem'}}>
+                            {searchResultsArray.map((deckItem, index) => (
+                                <PublicDeckResultCard deckItem={deckItem} index={index} key={index} addPublicDeck={addPublicDeck} alreadyOwned={appState?.decks[deckItem.id] !== undefined ? true: false} />
+                            ))}
+                        </div>
 
                         {/* HERE-ish: a bunch of wide rows with extracted search data with buttons to Add to your own decks */}
                         
-                    </>
+                    </div>
                 ) : (
                     <>
-                        {Object.keys(appState.decks).filter(deckID => (appState.decks[deckID].name.toLowerCase().includes(deckSearch))).map((deckID, index) => (
-                            <div id="deckPreview" key={index} onClick={() => viewDeck(deckID)} style={{boxSizing: 'border-box', border: appState.decks[deckID].shared ? '3px solid gold' : '2px solid black', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '300px', height: '180px', backgroundColor: '#0AF', borderRadius: '5%'}}>
+                        {Object.keys(appState?.decks).filter(deckID => (appState.decks[deckID].name.toLowerCase().includes(deckSearch))).map((deckID, index) => (
+                            <div id="deckPreview" key={index} onClick={() => viewDeck(deckID)} style={{boxSizing: 'border-box', border: appState.decks[deckID].published ? '4px solid gold' : '2px solid black', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '300px', height: '180px', backgroundColor: appState.decks[deckID].variant ? '#3DF' : '#0AF', borderRadius: '5%'}}>
                                 <div>{appState.decks[deckID].name}</div>
                                 <div style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Card Total: {appState.decks[deckID].cards.length}</div>
                             </div>
@@ -76,5 +100,26 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
             </div>
 
         </div>        
+    )
+}
+
+const PublicDeckResultCard = ({ deckItem, index, addPublicDeck, alreadyOwned }) => {
+    return (
+        <div style={{width: '100%', border: '1px solid green', boxSizing: 'border-box', padding: '1rem', backgroundColor: 'white'}}>
+            <h4 style={{margin: '0'}}>{deckItem.name} - {deckItem.cardTotal} cards</h4>
+            <p>{deckItem.description}</p>
+            <div style={{display: 'flex', width: '100%'}}>
+                {alreadyOwned ? (
+                    <>
+                        <button disabled={true} style={{padding: '0.5rem 1rem', fontSize: '1.1rem', fontWeight: '600'}}>Already Owned</button>
+                    </>
+                ) : (
+                    <>
+                        <button onClick={() => addPublicDeck(deckItem.id)} style={{padding: '0.5rem 1rem', fontSize: '1.1rem', fontWeight: '600'}}>Add to My Decks</button>
+                    </>
+                )}
+                
+            </div>
+        </div>
     )
 }
