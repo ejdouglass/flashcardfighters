@@ -7,6 +7,7 @@ const DeckSchema = new Schema({
     ownerID: String,
     variant: Boolean,
     shared: Boolean,
+    published: Boolean,
     lastUpdateTime: Date,
     lastPush: Date,
     tags: String,

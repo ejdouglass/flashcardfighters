@@ -37,6 +37,7 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     const [cardViewMode, setCardViewMode] = useState('prompt');
     const [cardSearch, setCardSearch] = useState('');
     const promptRef = useRef(null);
+    const lastPushRef = useRef(null);
 
     function createNewCard(e) {
         // HERE: check to see if new card is valid, and if so, create and ALERT accordingly
@@ -74,8 +75,25 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
             .catch(err => alert(`Welp, THAT didn't work, because: ${err}`));
     }
 
-    function unpublishDeck() {
+    function updateDeck() {
+        axios.post('/deck/update', { token: appState.token, decksToUpdate: [{...newDeck}] })
+            .then(res => {
+                // as long as appState is set first, this mildly abhorrent approach works a-ok!
+                setAppState({...appState, alertString: `Deck has been successfully updated!`});
+                return setNewDeck({...newDeck, lastPush: res.data.timestamp});
+            })
+            .catch(err => alert(`ERROR UPDATING DECK: ${err}`));
+    }
 
+    function unpublishDeck() {
+        axios.post('/deck/unpublish', { token: appState?.token, deckID: newDeck.id })
+            .then(res => {
+                if (res.data.success) {
+                    setAppState({...appState, alertString: `You have successfully unpublished this deck. It is no longer shared online.`});
+                    return setNewDeck({...newDeck, published: false, lastPush: undefined});
+                }
+            })
+            .catch(err => console.log(`Error unpublishing this deck: ${err}`))
     }
 
     function saveNewDeck() {
@@ -128,6 +146,17 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
         if (newDeck.name.length > 0) return saveNewDeck();
     }, [newDeck]);
 
+    useEffect(() => {
+        if (!lastPushRef.current && newDeck?.published) {
+            let dateSource = new Date(newDeck.lastPush);
+            let daysRefArr = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            lastPushRef.current = `${daysRefArr[dateSource.getDay(dateSource)]} ${dateSource.getMonth() + 1}/${dateSource.getDate()} `;
+            let dateDifference = Math.floor((new Date().getTime() - dateSource.getTime()) / (1000 * 3600 * 24));
+            let finalString = dateDifference === 0 ? `(today)` : `(${dateDifference} days ago)`;
+            lastPushRef.current += finalString;
+        }
+    }, [newDeck.published]);
+
 
     return (
         
@@ -154,8 +183,21 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
 
                     <div id="deckButtonsOne" style={{display: 'flex', flexDirection: 'column'}}>
                         <button onClick={deleteDeck} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>DELETE THIS DECK</button>
-                        <button onClick={publishDeck} disabled={!appState.username} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>PUBLISH THIS DECK</button>
+                        {newDeck.published ? (
+                            <button onClick={updateDeck} disabled={!appState.username} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>UPDATE THIS DECK</button>
+                        ) : (
+                            <button onClick={publishDeck} disabled={!appState.username} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>PUBLISH THIS DECK</button>
+                        )}
+                        
                     </div>
+
+                    {newDeck?.published &&
+                        <div>
+                            <h3>{newDeck?.published ? `Last Publish: ${lastPushRef.current}` : ''}</h3>
+                            <button onClick={unpublishDeck}>Unpublish Deck</button>
+                        </div>
+                    }
+
                     
                 </div>
 

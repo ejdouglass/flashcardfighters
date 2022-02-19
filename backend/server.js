@@ -75,7 +75,19 @@ function saveUser(user) {
         });
 }
 
-// HERE: probably a saveDeck(deck) fxn, similar to above
+function saveDeck(deck) {
+    const filter = { id: deck.id };
+    const update = { $set: deck };
+    const options = { new: true, useFindAndModify: false };
+    Deck.findOneAndUpdate(filter, update, options)
+        .then(updatedResult => {
+            console.log(`${updatedResult.name} deck has been saved and updated in the database.`);
+
+        })
+        .catch(err => {
+            console.log(`We encountered an error saving the user: ${err}.`);
+        });    
+}
 
 mongoose.connect(process.env.DB_HOST)
     .then(() => console.log(`Successfully connected to Flashcard Fighters database.`))
@@ -292,7 +304,7 @@ app.post('/user/add_deck', (req, res, next) => {
         const decodedToken = jwt.verify(token, process.env.SECRET);
         const { username, id } = decodedToken;
 
-        User.findOne({ username, username, id: id })
+        User.findOne({ username: username, id: id })
         .then(searchResult => {
             if (searchResult === null) {
                 return console.log(`No such user found. 406 error reported.`);
@@ -308,13 +320,8 @@ app.post('/user/add_deck', (req, res, next) => {
             res.status(406).json({type: `failure`, echo: `Something went wrong logging in with these credentials.`});
         })        
 
-        // ... it'd be helpful to have a quicker way to find and update a user for here and elsewhere
     }
 
-    // HERE: cheerfully pass down the deck for the user
-    // ... actually let's set it to variant true, just in case
-
-    // NOTE: make sure the client lets the user know the process was successful; no need to attach that here
     res.status(200).json({deck: targetDeck});
 
 
@@ -331,10 +338,10 @@ app.post('/user/delete', (req, res, next) => {
     // 
     let { token } = req.body;
     const decodedToken = jwt.verify(token, process.env.SECRET);
-    const { id } = decodedToken;
+    const { username, id } = decodedToken;
     User.findOneAndDelete({ id: id })
         .then(result => {
-            console.log(`Deleted a user. BLOOP.`);
+            console.log(`Deleted the user ${username}. BLOOP.`);
             return res.status(200).json({success: true});
         })
         .catch(err => console.log(`Error deleting a user: ${err}`));
@@ -387,9 +394,6 @@ app.post('/deck/publish', (req, res, next) => {
                 // NOTE: this is not the best way to create a 'new' token for the user; revisit
                 publishingUserCopy.appData.token = craftAccessToken(publishingUserCopy.username, publishingUserCopy.id);
 
-                // this is a string... it should be an object. That's a whoops.
-                console.log(`The user's appData is now of type ${typeof publishingUserCopy.appData}`);
-
 
                 decksToAdd.forEach((deckObj, index) => {
                     // inquire in gentle fashion @ the DB via model for each deck
@@ -408,12 +412,11 @@ app.post('/deck/publish', (req, res, next) => {
             
                                 newDBDeck.save()
                                     .then(freshDeck => {
-                                        // 
                                         successfulDeckUploadCount += 1;
                                         publishingUserCopy.appData.decks[freshDeck.id] = freshDeck;
                                         publishingUserCopy.appData.decks[freshDeck.id].published = true;
+                                        // ok, so the above reads as true, that's a good start
                                         publishingUserCopy.appData.alertString = `${successfulDeckUploadCount} deck${successfulDeckUploadCount > 1 ? 's' : ''} added to the Public Online Repository!`
-                                        console.log(`Successfully saved Deck: ${freshDeck.name}.`);
                                         allPublicDecks[freshDeck.id] = freshDeck;
                                         wrapItUp(index, decksToAdd.length, publishingUserCopy);
                                     })
@@ -422,9 +425,6 @@ app.post('/deck/publish', (req, res, next) => {
                                         res.json({success: false, alertString: `Something went wrong attempting to save the deck to the public repository: ${JSON.stringify(err)}`});
                                     })
                             } else {
-                                console.log(`Server is in 'deck already exists' mode. User's appData is of type ${typeof publishingUserCopy.appData}`)
-                                // This deck already exists in the DB! We'll sweepingly reject for now, but later we can do an id check for more specific messaging/next steps
-                                // res.json({success: false, alertString: `That Deck has already been uploaded.`, alertType: 'error'});
                                 publishingUserCopy.appData.alertString = `That deck has already been uploaded! Later you can update it, perhaps, if you're the owner.`;
                                 console.log(`Someone tried to upload a deck that already exists, so we're ignoring it for now. FeedbackMessage is now: ${feedbackMessage}`);
                                 wrapItUp(index, decksToAdd.length, publishingUserCopy);
@@ -449,20 +449,14 @@ app.post('/deck/publish', (req, res, next) => {
         })
 
 
-    // !MHR
 
-    // ISSUE: it DOES save, but I'm not sure what, if anything, is getting back down to the user
-    // the WRAPUP ENGAGED -does- fire, though, so... that's... something?
-    // let's log the appData, and then check what the client is or isn't receiving
     function wrapItUp(index, length, user) {
         if (index === length - 1) {
             // Should only fire this success header and response when all the async shenanigans are good to go
             // HERE: final userSave, then pass down to client for updating
-            console.log(`WRAPUP ENGAGED. We're hopefully sending down the user's appData which is of type ${typeof user.appData}`);
-            console.log(`appData for token is ${user.appData.token} ... username is ${user.appData.username}`);
             user.appData.mode = 'viewDecks';
             user.appData.username = user.username;
-            console.log(`Whoops, forgot that username is not, by default, in the userData. Now user.userData.username is ${user.appData.username}`);
+            // console.log(`Let's just look at the decks as we pass back the new overwriting userData: ${JSON.stringify(user.appData.decks)}`)
             // turns out the userData object is attached 
             res.status(200).json({success: true, userData: user.appData, alertString: user.appData.alertString});
             return saveUser(user);
@@ -472,16 +466,58 @@ app.post('/deck/publish', (req, res, next) => {
 });
 
 app.post('/deck/update', (req, res, next) => {
-    // HERE: handle both the creation and updating of a 'public deck' (private decks live with their user's data)
-    // Note that 'update' is used here because the webapp won't 'know' automatically if a deck is shared or not under the current design
-    // Deck deletion can, therefore, live here as well, though having one route do three different tasks feels a little clunky
-    // Also note that it's likely that the 'shared' attribute is going onto decks soon, which should help disambiguate a bit
-
-    // NOTE that only 'profiles' can upload decks, which also allows us to assign the user profile's id as the deck's ownerID
-    // -- this is to allow later deletion of the deck by its 'owner,' as well as other 'associated actions' between creator and deck
+    // THIS: overwrite the 'old' version of the deck with the new proposed version, via the owner's intention
+    // check ownerID of the deck in question
+    // we'll assume decksToUpdate is an array for later implementation, but currently it'll be a single deck (array length 1)
     let { token, decksToUpdate } = req.body;
     const decodedToken = jwt.verify(token, process.env.SECRET);
     const { id } = decodedToken;
+    const newPushTimestamp = new Date();
+    let userObj;
+    User.findOne({ id: id })
+        .then(foundUser => {
+            userObj = JSON.parse(JSON.stringify(foundUser));
+            userObj.appData = JSON.parse(userObj.appData);
+
+            decksToUpdate.forEach(deckObj => {
+                allPublicDecks[deckObj.id] = {...deckObj};
+                allPublicDecks[deckObj.id].lastPush = newPushTimestamp;
+                userObj.appData.decks[deckObj.id] = {...allPublicDecks[deckObj.id]};
+                saveDeck(allPublicDecks[deckObj.id]);
+            }); 
+            
+            saveUser(userObj);
+        })
+        .catch(err => console.log(`Error loading user from DB while updating a deck; error message: ${err}`));
+
+    res.status(200).json({success: true, timestamp: newPushTimestamp});
+
+});
+
+app.post('/deck/unpublish', (req, res, next) => {
+    const { token, deckID } = req.body;
+    const decodedToken = jwt.verify(token, process.env.SECRET);
+    const { id: userID } = decodedToken;
+
+    // basically, we have to remove this deck from allPublicDecks, from the DB, and then set the user's data of this deck's PUBLISHED to false all around
+    Deck.findOneAndDelete({ id: deckID })
+        .then(result => {
+            console.log(`Here's the result that passes in from deletion of a deck, for reference: ${result}`);
+            delete allPublicDecks[deckID];
+
+            User.findOne({ id: userID })
+                .then(foundUser => {
+                    let userCopy = JSON.parse(JSON.stringify(foundUser));
+                    userCopy.appData = JSON.parse(userCopy.appData);
+                    userCopy.appData.decks[deckID].published = false;
+                    userCopy.appData.decks[deckID].lastPush = undefined;
+
+                    saveUser(userCopy);
+                    res.status(200).json({success: true});
+                })
+                .catch(err => console.log(`Error found during deck unpublishing, user-fetch portion: ${err}`));
+        })
+        .catch(err => console.log(`Error occurred during a deck unpublish: ${err}`));
 });
 
 app.post('/deck/fetch', (req, res, next) => {

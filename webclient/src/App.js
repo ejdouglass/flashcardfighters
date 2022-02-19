@@ -115,20 +115,28 @@ export default function App() {
 
 CURRENTLY: building out backend
 Final Checklist:
-[_] Build out all projected endpoints for API (user create, user login, user delete, user add deck(s) from backend; deck add/update/fetch)
-  - current: deck/update
-
 [_] 0123 session logic, session ending/review
-[_] Rejigger responsiveness and scalability, especially in the cards themselves, to allow longer-form content
+  - change session creation to put us INTO the session potentially, OR into the session-creation page, NOT homepage
+  - session ending: add total cards gone through
+  - rejigger process so it intuitively lets you either SKIP or ANSWER (reveal), then rate-answer if non-skipped
+  
+  x session creation: deck search would be great, rather than just ALL THE DECKS in a super-awkward single-column unto oblivion
+  x scoot CreateStudySessionScreen into its own happy area
+
+
+[_] Eh, eliminate study session params for finishing, just discretionary only
 [_] Add history object... define 'history moments,' as well as achievements key (or whatever we want to call it)
+[_] Rejigger responsiveness and scalability, especially in the cards themselves, to allow longer-form content
 [_] Basic tuts/guides/how-to-use info, maximum user FRIENDLINESS
-[_] Prettify, including responsiveness considerations across mobile formats
+[_] Prettify, including responsiveness considerations across mobile formats (alerts, prompts, styling)
 ..
-[x] Add 'public deck browsing' capabilities
+[x] Build out all projected endpoints for API (user create, user login, user delete, user add deck(s) from backend; deck add/update/fetch/unpublish)
 
 
 LIL FIXES/ADJUSTMENTS:
+[_] Better handling of attempting to Publish someone else's deck... or just making the option vanish (variant: true?)
 [_] If the user attempts to publish something that's already published and not update-worthy, kick out before running deck-adding code in server
+[_] Don't kick to 'decks' screen upon publishing, ESPECIALLY for cases where it's already published and nothing happens :P
 [_] consolidate the 'search for decks' bar on the Decks page
 [_] should add a 'Publish Changes' button to decks, so that 'shared decks' can update properly but NOT on-the-fly like they do in the client
 [_] we should probably NOT allow empty decks to be published :P
@@ -138,15 +146,12 @@ LIL FIXES/ADJUSTMENTS:
 
 
 RUH ROH?
-[_] Publishing decks still doesn't provide any feedback NOR does it properly show deck.published === true results
 [_] Local deletion of decks does NOT properly let the backend know... this is particularly pertinent for Variant Decks
 [_] 'downloaded from public' deck are getting the 'shared' flag automatically set, but it's likely being misapplied, since that user didn't necessarily share it
   - probably have to take a look at the logic of 'shared: true' and ensure it ONLY applies to the client, not as a deck variable
 [_] 'Delete This Deck' probably should NOT appear before the deck is actually created :P
 ..
-[x] logging out and logging back in 'resets' the 'shared' flag
-[x] during deck deletion, prompt remains if the user hits YES, only disappears upon NAH
-[x] Decks that were added to the user from the public repo DISINTEGRATE upon logout
+[x] deck.published doesn't show properly for user to indicate proper ownership/published status?
 
 
 
