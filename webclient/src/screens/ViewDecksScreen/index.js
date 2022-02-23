@@ -1,25 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 export default function ViewDecksScreen({ appState, setAppState, goHome }) {
     const [deckSearch, setDeckSearch] = useState('');
-    const [onlineDeckSearch, setOnlineDeckSearch] = useState('');
     const [viewOnlineDecks, setViewOnlineDecks] = useState(false);
     const [searchResultsArray, setSearchResultsArray] = useState([]);
+    const searchInputRef = useRef(null);
+
+    // Hm. Can either consolidate the two searches into a single bar, or... actually, yep, let's do that.
+    // Then add a ref.focus on it whenever we switch tabs.
 
 
     function viewDeck(deckId) {
         return setAppState({...appState, mode: 'editDeck', currentDeckId: deckId});
     }
 
-    function performOnlineSearch(e) {
+    function handleSearchInput(e) {
         e.preventDefault();
-        // HERE: maybe engage a "searching decks" feedback of some sort somewhere
-        axios.post('/deck/fetch', { deckSearchString: onlineDeckSearch })
+        // consider resetting online results to blank when deleting search string (owned decks currently behave as expected already)
+        if (viewOnlineDecks) {
+            axios.post('/deck/fetch', { deckSearchString: deckSearch })
             .then(res => {
                 setSearchResultsArray(res.data.deckResultsArray);
             })
-            .catch(err => console.log(err));
+            .catch(err => console.log(err));            
+        }
+        return setDeckSearch(e.target.value);
     }
 
     function addPublicDeck(id) {
@@ -34,10 +40,15 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
             .then(res => {
                 let allDecksCopy = {...appState.decks};
                 allDecksCopy[id] = res.data.deck;
-                setAppState({...appState, decks: allDecksCopy, alertString: `Successfully added ${res.data.deck.name} to your decks. I hope.`});
+                setAppState({...appState, decks: allDecksCopy, alertString: `Successfully added ${res.data.deck.name} to your decks!`});
             })
             .catch(err => console.log(`An error in retrieving a public deck has occurred: ${err}`));
     }
+
+
+    useEffect(() => {
+        searchInputRef.current.focus();
+    }, [viewOnlineDecks]);
 
 
     return (
@@ -47,7 +58,7 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
 
                 <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                     <div>Search for specific decks:</div>
-                    <input style={{margin: '0.5rem 0'}} type='text' placeholder={'Search words'} value={deckSearch} onChange={e => setDeckSearch(e.target.value)} />
+                    <input ref={searchInputRef} style={{margin: '0.5rem 0'}} type='text' placeholder={'Search words'} value={deckSearch} onChange={e => handleSearchInput(e)} />
                 </div>
 
 
@@ -66,10 +77,10 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
 
                 {viewOnlineDecks ? (
                     <div style={{display: 'flex', flexDirection: 'column', width: '100%', gap: '1rem', boxSizing: 'border-box'}}>
-                        <form style={{display: 'flex', gap: '1rem'}} onSubmit={performOnlineSearch}>
+                        {/* <form style={{display: 'flex', gap: '1rem'}} onSubmit={performOnlineSearch}>
                             <input type='text' value={onlineDeckSearch} onChange={e => setOnlineDeckSearch(e.target.value)} style={{padding: '0.5rem 1 rem', fontSize: '1rem'}} placeholder={`Enter Search Term(s)`} />
                             <button type='submit'>Search!</button>
-                        </form>
+                        </form> */}
                         <div style={{display: 'flex', width: '100%', flexDirection: 'column', gap: '1rem'}}>
                             {searchResultsArray.map((deckItem, index) => (
                                 <PublicDeckResultCard deckItem={deckItem} index={index} key={index} addPublicDeck={addPublicDeck} alreadyOwned={appState?.decks[deckItem.id] !== undefined ? true: false} />
@@ -81,7 +92,7 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
                     </div>
                 ) : (
                     <>
-                        {Object.keys(appState?.decks).filter(deckID => (appState.decks[deckID].name.toLowerCase().includes(deckSearch))).map((deckID, index) => (
+                        {Object.keys(appState?.decks).filter(deckID => (appState.decks[deckID].name.toLowerCase().includes(deckSearch.toLowerCase()))).map((deckID, index) => (
                             <div id="deckPreview" key={index} onClick={() => viewDeck(deckID)} style={{boxSizing: 'border-box', border: appState.decks[deckID].published ? '4px solid gold' : '2px solid black', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '300px', height: '180px', backgroundColor: appState.decks[deckID].variant ? '#3DF' : '#0AF', borderRadius: '5%'}}>
                                 <div>{appState.decks[deckID].name}</div>
                                 <div style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Card Total: {appState.decks[deckID].cards.length}</div>

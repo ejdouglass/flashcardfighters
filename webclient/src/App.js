@@ -115,22 +115,23 @@ export default function App() {
 
 CURRENTLY: building out backend
 Final Checklist:
-[_] 0123 session logic, session ending/review
-  - change session creation to put us INTO the session potentially, OR into the session-creation page, NOT homepage
-  - session ending: add total cards gone through
-  - rejigger process so it intuitively lets you either SKIP or ANSWER (reveal), then rate-answer if non-skipped
-  
-  x session creation: deck search would be great, rather than just ALL THE DECKS in a super-awkward single-column unto oblivion
-  x scoot CreateStudySessionScreen into its own happy area
-
-
-[_] Eh, eliminate study session params for finishing, just discretionary only
 [_] Add history object... define 'history moments,' as well as achievements key (or whatever we want to call it)
+  - achievements: { timestamp, name, description }
+  - list of history 'events': ___
+  - add user/update route
+
+  
+[_] Do -something- with the HomeScreen -- likely a little mini-tutorial if not logged in, a welcome and guide
 [_] Rejigger responsiveness and scalability, especially in the cards themselves, to allow longer-form content
-[_] Basic tuts/guides/how-to-use info, maximum user FRIENDLINESS
-[_] Prettify, including responsiveness considerations across mobile formats (alerts, prompts, styling)
+[_] Basic tuts/guides/how-to-use info, maximum user friendliness (consider either per-page/appState.mode "?" button or general help/how-to page)
+  - ideally define a few 'phases' of app engagement (logical steps and order they're likely to occur and/or coincide in) with relevant HomeScreen info
+  - can also have a "!" appear on the HomeScreen and/or Profile Link Button
+  - consider consolidating Home/Profile? (thinking of mobile screen being way itty-bittier)
+[_] Prettify (alerts, prompts, styling, etc.), including responsiveness considerations across mobile formats & final folio page layout concerns
+  -- play with no console, console, and console-mobile-emulation modes to see where things 'break' a bit
 ..
-[x] Build out all projected endpoints for API (user create, user login, user delete, user add deck(s) from backend; deck add/update/fetch/unpublish)
+[x] Eliminate study session params for finishing, just discretionary only
+[x] 0123 session logic, session ending/review
 
 
 LIL FIXES/ADJUSTMENTS:
@@ -143,6 +144,11 @@ LIL FIXES/ADJUSTMENTS:
 [_] axios error handling is currently pretty clumsy in all cases
 [_] forms where appropriate; offhand, 'create new profile' doesn't respond to [Enter/Return] properly
 [_] Search Public Decks should autoFocus on the search field when selected
+
+
+???
+[_] Color scheme
+[_] Best way to visually denote 'currently active' tab, selection, etc.
 
 
 RUH ROH?

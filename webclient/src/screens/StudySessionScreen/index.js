@@ -1,20 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-export default function StudySessionScreen({ fireAlert, goHome, appState, setAppState }) {
+export default function StudySessionScreen({ goHome, appState, setAppState }) {
     /*
-        A study session is just some collection of decks that you drift through giving your explanations for the prompts then comparing to the 'actual' answer.
-        - The default for now is just going to be having to CHECK ANSWER before moving to next card, though a SKIP CARD option would be fine
-        - Can have indicators for how many times you've gone through the deck and how long you've been studying
+        add list:
+            - session ending: add total cards gone through, parsed time, mastery feedbacks, etc.
+            X rejigger process so it intuitively lets you either SKIP or ANSWER (reveal), then rate-answer if non-skipped
+            X add show/hide timer toggle
+            X add cards done/sets done during as well as after, cuz FIGHTING CARDS
 
-        Should we have a 'session history' to go back through immediately after 'finishing' to review given/supposed answers? Probably yes?
 
-        BLOCKIT:
-        -- 
+        Woof, this is all a bit fuzzy and clunky. Refactor time. Let's walk it through:
+        X per card, we want to type out an answer, submit it, and then have feed back 1-2-3 mastery (or 0 if skipped)
+        X 'skipped' cards should set to mastery 0 and show the answer before moving on (not a true skip; goal is to learn)
+        X we'll have to rejigger the keyInputs a bit to de-escalate 'Enter' effects slightly and add 1-2-3 support
+        X disable inputs when doing 1-2-3
+        X cards not initially shuffled? (shuffled fine after first loop, though)
+        X 1-2-3 support (inverted keys, bigger doots to boop)
+        X text input for 'provide user explanation for prompt' scrolls mega awkwardly
+        X ongoing current session mastery level display (S - F? or N/A until at least one full set in)
+        X hm, let's NOT have "Enter" automatically "SKIP" by default, it's too easy to jam through accidentally
+
+        - add styled session-ending screen
+        - 'session overview' section at the top of the screen, possibly in semi-gridlike glory
+
+        STYLING:
+        - standardize/colorize the "1-2-3" buttons, remove light gray container line
+
         
-        
-        Stuff to consider adding here:
-        -- study time
-        -- ?
+
+        STRETCH:
+        -- it'd be neat to have a 'session set progress bar' that 'fills' as you go
+            -> double bonus for dynamic animated fill
+            -> triple bonus for animations, both here and for booping the 123
+        -- research what oddities may occur upon page refresh during a session :P
+            -> consider also 'session pausing' mechanisms
+            -> can also do a 'current session saving' in this app's whatDo equivalent in case of interruption or what have you  
+        -- consider having the 1-2-3 be within easy-tapping range on a phone (tamp them to the bottom of the display)          
+
 
 
         -- remember to create a component for these card(s) that honors their cardstock, etc.
@@ -28,8 +50,13 @@ export default function StudySessionScreen({ fireAlert, goHome, appState, setApp
        finishSets: undefined,
        showExplanation: false,
        setsDone: 0,
+       cardsDone: 0,
+       masteryTotal: 0,
+       latestGrade: undefined,
+       setMastery: []
    });
    const [timer, setTimer] = useState(0);
+   const [timerVisible, setTimerVisible] = useState(false);
    const [currentGuess, setCurrentGuess] = useState('');
    const [sessionFinished, setSessionFinished] = useState(false);
    const allDone = useRef(null);
@@ -37,45 +64,53 @@ export default function StudySessionScreen({ fireAlert, goHome, appState, setApp
 
     const handleSessionKeyInput = e => {
     // OK, let's quickly decide on some keyinputs we want...
-    /*
-        ... AND that means advanceSession() will always use wacky-tacky data, whoops
-        - MAKE GUESS
-        - ADVANCE TO NEXT CARD (assumes guess is made and answer is revealed)
-        - REVEAL EXPLANATION (separate from registering guess, I guess :P)
-        - SKIP CARD
-        - FINISH SESSION
-
-
-        'Require' an answer to be written for every card
-        -- then 1-2-3 for 'easy-eh-onoes' understanding level upon review
-
-        TBD: 
-        -- parse study time into something more coherent for hoomans
-
-
-        e.key options: 
-        - Enter, 1, 2, 3
-        !MHR - make textarea/input into a div when it's "review mode time"
-    */
         // e.preventDefault();
         if (sessionFinished) return;
         switch (e.key) {
-            
-            case 'Enter': 
+            case 'Enter': {
                 // HERE: if some amount of guess is entered, do the 'reveal' and null the guess input ideally;
                 e.preventDefault();
-                if (!session.showExplanation && currentGuess.length > 0) return setSession({...session, showExplanation: true});
+                // if (!session.showExplanation && currentGuess.length > 0) return setSession({...session, showExplanation: true});
                 // console.log(`ShowExplanation is ${session.showExplanation} and currentGuess length is ${currentGuess.length}`)
+                if (session.showExplanation || !currentGuess.length) return;
+                if (!session.showExplanation && currentGuess.length) return advanceSession();
                 return advanceSession();
+            }
+
+
+            case 'Escape': {
+                if (!session.showExplanation && !currentGuess.length) return advanceSession(0);
+            }
             
             // the three below options must ensure we're in the RATE YOUR ANSWER mode
-            case '1':
-            case '2':
-            case '3':
-                return;
+            // currently they just disable the user from putting in 1, 2, or 3 in their typing :P
+            case '1':{
+                if (session.showExplanation) {
+                    e.preventDefault();
+                    return advanceSession(3);
+                }
+
+            }
+                
+            case '2': {
+                if (session.showExplanation) {
+                    e.preventDefault();
+                    return advanceSession(2);
+                }
+
+            }
+                
+            case '3': {
+                if (session.showExplanation) {
+                    e.preventDefault();
+                    return advanceSession(1);
+                }
+
+            }
+                
 
             default:
-                console.log(`Booped the ${e.key} key.`);
+                // console.log(`Booped the ${e.key} key.`);
         }
         const aZero = 0;
     };
@@ -90,38 +125,81 @@ export default function StudySessionScreen({ fireAlert, goHome, appState, setApp
         return localArray;
     }
 
-    function parseSecondsToHMS(totalSeconds) {
-        // THIS: take the given seconds and return a string hh:mm:ss, with no hh and no leading 0 for mm
-        // 3600 seconds is 1h
+    function parseMasteryIntoGrade(masteryLevel, raw) {
+        // note that with only a 3-point 'grading system,' it's REALLY easy to have low-skewed scores, as even "I kinda get it!" is already a 66% :P
+        // with that in mind, it's likely meaningful to go ahead and adjust based on 3 = 100%, 2 = 85%, 3 = lower, etc.
+        // ... try to keep it simple, though, as I believe we could get pretty easily in the weeds on the math here
+        let gradePoint = masteryLevel / 3 * 100;
+        if (raw) return gradePoint.toFixed(2);
+        if (gradePoint === 100) return 'S';
+        if (gradePoint < 100 && gradePoint >= 90) return 'A';
+        if (gradePoint < 90 && gradePoint >= 80) return 'B';
+        if (gradePoint < 80 && gradePoint >= 70) return 'C';
+        if (gradePoint < 70 && gradePoint >= 60) return 'D';
+        if (gradePoint < 60) return 'F';
+    }
+
+    function parseSecondsToHMS(totalSeconds, verbose) {
         let hours, minutes, seconds;
         hours = Math.floor(totalSeconds / 3600);
         minutes = Math.floor((totalSeconds - hours * 3600) / 60);
         seconds = Math.floor(totalSeconds - hours * 3600 - minutes * 60);
-        return `${hours ? `${hours}:` : ''}${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
-        // return '' + hours + 'h' + minutes + 'm' + seconds + 's';
+        return verbose ? `${hours ? `${hours} hours,` : ''} ${minutes ? `${minutes} minutes` : ``} ${minutes && seconds ? ' and ' : ''} ${seconds ?  `${seconds} seconds` : ''}` : `${hours ? `${hours}:` : ''}${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
     }
 
-   function advanceSession() {
+   function advanceSession(masteryLevel) {
+       // FIX: 'skip' should show the explanation before we move on, but keep the mastery at 0
+       // add logic that goes through and tallies the total mastery level if it's time to bump setsDone
+       // ... also add logic that puts that total mastery level somewhere for our consideration :P
+
+       // just added session.masteryTotal # and session.setMastery []
+       // masteryTotal can increment each time and we can compute vs cardsDone at the end for ALL cards/session mastery
+       // setMastery is an array of per-set mastery average; can loop through upon setsDone change to grab that set's
+       // we'll assume for now all we 'care' about is first set mastery, final completed set mastery, and maaaaybe just the trend in between
+        if (!currentGuess.length) masteryLevel = 0;
+        if (!session.showExplanation && currentGuess.length > 0) {
+            guessRef.current.disabled = true;
+            return setSession({...session, showExplanation: true});
+        }
         let newCardIndex;
         let advanceSets = false;
-        if (session.cardIndex + 1 >= session.cards.length) {
-            newCardIndex = 0;
-            advanceSets = true;
-        }
-        else newCardIndex = session.cardIndex + 1;
+        let setMasteryAverage = 0;
+
 
         let newCards = [...session.cards];
         let newCardObj = {...newCards[session.cardIndex]};
         newCardObj.guess = currentGuess;
+        newCardObj.masteryLevel = masteryLevel;
         newCards[session.cardIndex] = {...newCardObj};
         setCurrentGuess('');
+        
+
+        // setSession occurs AFTER this computation, meaning the CURRENT data is completely ignored on the first time through
+        // so, for the forEach, we need to manually have the current masteryLevel slip in to get the correct result
+        if (session.cardIndex + 1 >= session.cards.length) {
+            newCardIndex = 0;
+            advanceSets = true;
+            // HERE: compute setMastery[] for this completed set (all the cards involved will have current masteryLevel)
+            let setMasteryTotal = 0;
+            session.cards.forEach(card => {
+                setMasteryTotal += card.masteryLevel || masteryLevel;
+            });
+            
+            setMasteryAverage = parseFloat((setMasteryTotal / session.cards.length).toFixed(2));
+        }
+        else newCardIndex = session.cardIndex + 1;
+        guessRef.current.disabled = false;
         guessRef.current.focus();
         return setSession({
             ...session,
             cardIndex: newCardIndex,
             showExplanation: false,
             cards: [...newCards],
-            setsDone: advanceSets ? session.setsDone + 1 : session.setsDone
+            setsDone: advanceSets ? session.setsDone + 1 : session.setsDone,
+            setMastery: advanceSets ? [...session.setMastery, setMasteryAverage] : session.setMastery,
+            cardsDone: session.cardsDone + 1,
+            masteryTotal: session.masteryTotal + masteryLevel,
+            latestGrade: advanceSets ? parseMasteryIntoGrade(setMasteryAverage) : session.latestGrade
         });
     }
 
@@ -147,13 +225,13 @@ export default function StudySessionScreen({ fireAlert, goHome, appState, setApp
             allSessionCards = [...allSessionCards, ...appState.decks[deckID].cards];
         });
 
+        allSessionCards = shuffleArray(allSessionCards);
+
         // HERE: add functionality to eliminate duplicates from allSessionCards
         // May get sliiightly sticky now that I'm thinking of cards that could have same ID but be variants or modified versions...
         // Soooo we may not do duplicate removal, OR we may become super strict on the duplicate concept (prompt === && explanation === ONLY)
 
         setSession({...session, cards: [...allSessionCards]});
-
-        
     }, []);
 
     useEffect(() => {
@@ -186,44 +264,54 @@ export default function StudySessionScreen({ fireAlert, goHome, appState, setApp
         return (
             <div style={{display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'center'}}>
                 <h1>Study Session: {appState.sessions[appState.currentModeTargetID].nickname}</h1>
-                <div>Study Time: {parseSecondsToHMS(timer)}</div>
-                <div>On Round #{session.setsDone + 1} Through these Cards</div>
+                <div>Study Time: {timerVisible ? parseSecondsToHMS(timer) : `(Hidden)`}</div>
+                <button onClick={() => setTimerVisible(!timerVisible)}>Toggle Timer Visibility</button>
+                <div>Session Set #{session.setsDone + 1} - {session.cardsDone} total cards conquered this session</div>
+                <div>{session.latestGrade ? `Current Mastery Grade: ${session.latestGrade}` : null}</div>
+                <button onClick={finishSession}>FINISH</button>
 
                 <div style={{width: '60%', border: '1px solid hsl(0, 0%, 80%)', justifyContent: 'center'}}>
                     <div style={{display: 'flex', justifyContent: 'center', marginBottom: '2rem', alignItems: 'center', textAlign: 'center', border: '1px solid black', borderRadius: '10px', padding: '1rem'}}>{session.cards[session.cardIndex].prompt}</div>
                     <div style={{display: 'flex', gap: '1rem', height: '30vh'}}>
                         {/* The below probably needs to become a textarea to avoid some funky long-input issues and to match the card aesthetic */}
-                        <input type='text' autoFocus={true} ref={guessRef} value={currentGuess} onChange={e => setCurrentGuess(e.target.value)} placeholder={'your explanation'} style={{display: 'flex', fontSize: 'calc(0.5rem + 0.5vw)', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '50vw', border: '1px solid black', padding: '0.5rem 1rem'}} />
-                        <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '50vw', border: '1px solid black', padding: '0.5rem 1rem'}}>{session.showExplanation ? session.cards[session.cardIndex].explanation : '(card explanation hidden)'}</div>
+                        {/* <input type='text' autoFocus={true} ref={guessRef} value={currentGuess} onChange={e => setCurrentGuess(e.target.value)} placeholder={'your explanation'} style={{display: 'flex', fontSize: 'calc(0.5rem + 0.5vw)', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '50vw', border: '1px solid black', padding: '0.5rem 1rem'}} /> */}
+                        <textarea autoFocus={true} ref={guessRef} value={currentGuess} onChange={e => setCurrentGuess(e.target.value)} placeholder={'your explanation'} style={{display: 'flex', fontFamily: 'arial', fontSize: 'calc(0.5rem + 0.5vw)', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '50vw', border: '1px solid black', resize: 'none', padding: '1.5rem 1rem'}} />
+                        <div style={{display: 'flex', justifyContent: 'center', textAlign: 'center', width: '50vw', border: '1px solid black', fontSize: 'calc(0.5rem + 0.5vw)', padding: '1.5rem 1rem'}}>{session.showExplanation ? session.cards[session.cardIndex].explanation : '(card explanation hidden)'}</div>
                     </div>
 
-                    {!session.showExplanation && (
-                        <div>
-                            <button onClick={() => setSession({...session, showExplanation: true})}>Reveal</button>
-                            <button onClick={advanceSession}>NEXT!</button>
-                            <button onClick={finishSession}>FINISH</button>                            
+                    {session.showExplanation ? (
+                        <div style={{width: '100%', display: 'flex', justifyContent: 'center', gap: '2rem'}}>
+                            <button onClick={() => advanceSession(3)}>NAILED it</button>
+                            <button onClick={() => advanceSession(2)}>KINDA got it</button>
+                            <button onClick={() => advanceSession(1)}>Woof, that's rough</button>
+                        </div>
+                    ) : (
+                        <div style={{width: '100%', display: 'flex', justifyContent: 'center', gap: '2rem'}}>
+                            <button onClick={advanceSession}>{currentGuess.length ? `GUESS` : `SKIP!`}</button>
                         </div>
                     )}
                 
                 </div>
 
                 
-
-                
-                <button>Skip (a later function)</button>
-
                 
             </div>
         )
     }
 
+    // can create a separate 'sessionFinished' component that can cheerfully receive and/or extrapolate info such as 'final score difference vs starting score'
     if (sessionFinished) return (
-        <div>
+        <div style={{display: 'flex', width: '100%', minHeight: '100%', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '1rem'}}>
             <h1>Good job, you're done!</h1>
-            <div>You went through all these cards completely {session.setsDone} times.</div>
-            <div>You spent {timer} seconds doing this study session.</div>
-            <div>Ideally, I'd show you some version of your guesses for you to review across all these cards, huh?</div>
-            <div>Likewise, it'd be good to show a 'self-assessed mastery level'... so add self-assessed levels.</div>
+            <div>Cards Fought: {session.cardsDone}</div>
+            <div>Sets Completed: {session.setsDone}</div>
+            <div>Total Session Time: {parseSecondsToHMS(timer, true)}</div>
+            <div>{session.setMastery[0] !== undefined ? `Your self-grade for your first run through this session was ${parseMasteryIntoGrade(session.setMastery[0])}.` : ``}</div>
+            {session.setMastery.length > 1 && 
+            <div>
+                    Your self-grade for your final run through was {parseMasteryIntoGrade(session.setMastery[session.setsDone - 1])}.
+            </div>
+            }
             <button onClick={goHome}>Back Home</button>
         </div>
     )

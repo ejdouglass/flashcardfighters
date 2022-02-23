@@ -24,7 +24,7 @@ export default function HomeScreen({ appState, setAppState }) {
             <h1>Flashcard Fighters - the APP!</h1>
             {appState?.username ? (
                 <div>
-                    <div>Logged in</div>
+                    <div>Logged in! But, uh, you probably knew that already. Upper Right! :-D</div>
                 </div>
             ) : (
                 <div>
@@ -46,8 +46,6 @@ export default function HomeScreen({ appState, setAppState }) {
 
             {/* HOME SCREEN MAIN ON: whatchu doin here? */}
 
-            <button style={{width: '200px', padding: '0.5rem'}} onClick={() => setAppState({...appState, mode: 'viewDecks'})}>View My Decks</button>
-            <button style={{width: '200px', padding: '0.5rem'}} onClick={() => setAppState({...appState, mode: 'viewStudySessions'})}>View Study Sessions</button>
             {/* <button style={{width: '200px', padding: '0.5rem', marginTop: '1rem'}} onClick={() => setAppState({...appState, mode: 'viewNotes'})}>Review Notes</button>
             <br /> */}
             {/* <button style={{width: '200px', padding: '0.5rem', marginTop: '1rem'}} onClick={() => setAppState({...appState, mode: 'studySession'})}>STUDY TIME!</button>
