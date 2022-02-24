@@ -287,6 +287,24 @@ app.post('/user/login', (req, res, next) => {
     }
 });
 
+app.post('/user/update', (req, res, next) => {
+    const { userAppData } = req.body;
+    const { token } = userAppData;
+    const decodedToken = jwt.verify(token, process.env.SECRET);
+    const { username, id } = decodedToken;
+    
+    User.findOne({ id: id, username: username })
+        .then(foundUser => {
+            // found ya! now to UPDATE ya!
+            // we'll test this on our first history update
+            let updatedUserObject = JSON.parse(JSON.stringify(foundUser));
+            updatedUserObject.appData = userAppData;
+            saveUser(updatedUserObject);
+        })
+        .catch(err => console.log(`Error updating user: ${err}`));
+    // !MHR
+});
+
 app.post('/user/add_deck', (req, res, next) => {
     // THIS: user wants to grab one or more decks to add to their personal decklist
     // we'll set "variant: true" here to indicate they're a 'clone'

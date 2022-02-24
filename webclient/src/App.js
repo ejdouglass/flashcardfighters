@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Alert from './components/Alert';
 import Prompt from './components/Prompt';
 import Screen from './components/Screen';
+import axios from 'axios';
 // import './App.css';
 
 export default function App() {
@@ -10,14 +11,24 @@ export default function App() {
     username: undefined,
     alertString: ``,
     globalPrompt: undefined,
-    cards: {}, // deprecating this
     decks: {},
     sessions: {},
     mode: undefined,
     currentDeckId: undefined,
     currentModeTargetID: undefined,
     schedule: {},
-    history: {} // mostly dateKeys, but can ALSO contain accomplishments key, for example
+    history: {
+      log: [],
+      actions: {
+        decksCreated: 0,
+        decksDeleted: 0,
+        decksDownloaded: 0,
+        decksPublished: 0,
+        decksUnpublished: 0,
+        sessionsCreated: 0,
+        sessionsStudied: 0        
+      }
+    }
   });
   const firstPaint = useRef(true);
 
@@ -50,11 +61,6 @@ export default function App() {
     return localStorage.setItem('flashcardfighterApp', JSON.stringify(savedAppState));
   }
 
-  function returnToHome() {
-    // THIS: evaluates what the user is currently doing and returns to mode: undefined
-    // ideally, this would 'pause' a current study session rather than null it out
-  }
-
 
   useEffect(() => {
     // here: app init check
@@ -68,10 +74,60 @@ export default function App() {
       appData = JSON.parse(appData);
       if (appData.alertString !== undefined) appData.alertString = undefined;
       if (appData.globalPrompt !== undefined) appData.globalPrompt = undefined;
+
+      // we can also 'proper-populate' any 'new' adjustments here, such as history.log
+      // 'initial load appState variable fixing'
+      if (!appData?.history?.log) {
+        appData.history.log = [];
+      }
+      if (!appData?.history?.actions) appData.history.actions = {
+        decksCreated: 0,
+        decksDeleted: 0,
+        decksDownloaded: 0,
+        decksPublished: 0,
+        decksUnpublished: 0,
+        sessionsCreated: 0,
+        sessionsStudied: 0
+      }
+
       setAppState(appData);
     }
-    console.log(`BOOT UP! globalPrompt is ${JSON.stringify(appState.globalPrompt)}`)
+
   }, []);
+
+  useEffect(() => {
+    if (firstPaint.current) return;
+    // NOTE: we're getting save errors with wild abandon here, so uh maybe let's check on that
+    // also, simple refreshes of the page are pinging the backend, which is... not ideal
+    if (appState.username && appState.token && appState.history.log.length) {
+
+      // HERE: analyze and collapse log items
+      /*
+            let newLogItem = {
+                echo: `You began assembling a new Deck called ${newDeck.name}.`,
+                timestamp: new Date(),
+                event: 'deck_creation',
+                subject: newDeck.id
+            }      
+      */
+      
+      // we'll for now assume we 'only' need to check the previous two log items for 'sameness' and then overwrite if so
+      if (appState.history.log[appState.history.log.length - 1].event === appState.history?.log[appState.history.log.length - 2]?.event && appState.history.log[appState.history.log.length - 1].subject === appState.history?.log[appState.history.log.length - 2]?.subject) {
+        // event and subject is the same, so we're going to assume these can be 'collapsed'
+      
+        let collapsedHistoryLog = [...appState.history.log];
+        collapsedHistoryLog.splice(collapsedHistoryLog.length - 2, 1);
+        return setAppState({...appState, history: {...appState.history, log: collapsedHistoryLog}});
+      }
+
+      return axios.post('/user/update', { userAppData: appState })
+        .then(res => {
+          // currently not expecting a response here :P
+          console.log(res);
+        })
+        .catch(err => console.log(`Error updating user: `, err));
+    }
+  }, [appState.history.log]);
 
   useEffect(() => {
     // CHAOS SAVING... not a production-worthy approach, but fine for current dev needs
@@ -87,7 +143,8 @@ export default function App() {
     // console.log(`appState has changed, not first paint currently, so saving app data...`);
     return saveApp();
 
-  }, [appState.decks, appState.mode, appState.sessions, appState.history, appState.historyLog]);
+  }, [appState.decks, appState.mode, appState.sessions, appState.history]);
+
 
   return (
     <div>
@@ -116,11 +173,27 @@ export default function App() {
 CURRENTLY: building out backend
 Final Checklist:
 [_] Add history object... define 'history moments,' as well as achievements key (or whatever we want to call it)
-  - achievements: { timestamp, name, description }
-  - list of history 'events': ___
-  - add user/update route
+  - hrm, should I do user/update in a side effect hook up above? 
+    -> many of the routes already 'save' the user on the backend anyway, so at this point it'd just be user.history
+    -> ok sure, let's give it a whirl
+  - achievements: { timestamp: __, name: __, description: __ }
+  - list of history 'events': create deck, grab public deck, publish deck, unpublish deck, delete deck, create session, finish session
+    -> each item will have its own 'history details' ... the 'echo' for the item will include its object details, probably?
+    -> history: {log:, achievements:, datekey1:, datekey2:, datekeyEtc:}
+    -> hm, do we even need dateKeys for this? hmm... for now, let's say nah, no need, just a LOG array is fine
+    -> so every act can do a history.actions bump (decks created, for example), history.log bump, history.achivements check potentially
+    -> orrrr we could leave out achievements for now, as it's kind of outside the current scope of use
+    -> the list:
+    [_] create deck
+    [_] delete deck
+    [_] grab public deck
+    [_] publish deck
+    [_] unpublish deck
+    [_] create session
+    [_] finish studying in a session
+  X add user/update route for cheerfully saving when history changes
 
-  
+
 [_] Do -something- with the HomeScreen -- likely a little mini-tutorial if not logged in, a welcome and guide
 [_] Rejigger responsiveness and scalability, especially in the cards themselves, to allow longer-form content
 [_] Basic tuts/guides/how-to-use info, maximum user friendliness (consider either per-page/appState.mode "?" button or general help/how-to page)
@@ -129,9 +202,8 @@ Final Checklist:
   - consider consolidating Home/Profile? (thinking of mobile screen being way itty-bittier)
 [_] Prettify (alerts, prompts, styling, etc.), including responsiveness considerations across mobile formats & final folio page layout concerns
   -- play with no console, console, and console-mobile-emulation modes to see where things 'break' a bit
+[_] Final 'walkthrough' with fresh app -- create, log out, log in, use every part of the app and make sure it works as expected
 ..
-[x] Eliminate study session params for finishing, just discretionary only
-[x] 0123 session logic, session ending/review
 
 
 LIL FIXES/ADJUSTMENTS:
@@ -143,7 +215,8 @@ LIL FIXES/ADJUSTMENTS:
 [_] we should probably NOT allow empty decks to be published :P
 [_] axios error handling is currently pretty clumsy in all cases
 [_] forms where appropriate; offhand, 'create new profile' doesn't respond to [Enter/Return] properly
-[_] Search Public Decks should autoFocus on the search field when selected
+..
+[x] Search Public Decks should autoFocus on the search field when selected
 
 
 ???

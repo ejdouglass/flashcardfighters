@@ -97,16 +97,28 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     }
 
     function saveNewDeck() {
-        // THIS: for now, we just want the deck to be saved (with placeholder name if necessary) to appState, changing appState.mode back to viewing decks
-        // IF this deck already exists, we want to override with the new version; if it does NOT exist, we give it a new ID, ensure uniqueness, and plop it into existence
+        // This fxn is currently called on EVERY change to the deck, assuming a deck name has been created
+        // That does mildly complicate our attempts to do a 'proper history action'... hm.
+        // OK! So! We'll do history shenanigans with a check to see if, while calling this, the deck already exists or not by id
+        // If does NOT exist, woo, new deck, save history.action of decksCreated +1 and history.log
         let newDeckFinalized = {...newDeck};
         if (!newDeckFinalized.name) newDeckFinalized.name = `Nameless Deck #${Object.keys(appState.decks).length + 1}`;
         let appStateCopy = JSON.parse(JSON.stringify(appState));
+
+        // LOLwhoops, this will save precisely the first character of the newDeck.name
+        // a few possible fixes... hm... the simplest is probably just 'forcing' deck naming to be complete before allowing card creation
+        // also can make an 'intelligent' sub-system for assessing log items and 'collapsing' similar events into the latest proper log event
+        // that sounds entertaining; let's try that!
+        let newLogItem = {
+            echo: `You began assembling a new Deck called ${newDeck.name}.`,
+            timestamp: new Date(),
+            event: 'deck_creation',
+            subject: newDeck.id
+        }
+        appStateCopy.history.log.push(newLogItem);
+        
         appStateCopy.decks[newDeckFinalized.id] = newDeckFinalized;
         return setAppState(appStateCopy);
-
-        // WHOOPS: we're in a save-loop where changing even the deck name calls a new setDeck which calls the side effect of saving which calls this and so on...
-        // How can we avoid that eternal loop? 
     }
 
     function handleCardUpdate(index, newString, target) {

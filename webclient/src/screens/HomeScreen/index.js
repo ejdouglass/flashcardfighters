@@ -40,8 +40,10 @@ export default function HomeScreen({ appState, setAppState }) {
                 </div>
             )}
 
-            <div>
-                Hi! This area is reserved for history items. Let's test the power of HISTORY!
+            <div style={{padding: '1rem', display: 'flex', width: '80%', justifyContent: 'center', flexDirection: 'column', border: '1px solid black', borderRadius: '5px'}}>
+                {appState.history.log.map((historyItem, index) => (
+                    <div key={index} style={{width: '100%', color: 'white', padding: '1rem', boxSizing: 'border-box', backgroundColor: '#0AF'}}>{historyItem.echo}</div>
+                ))}
             </div>
 
             {/* HOME SCREEN MAIN ON: whatchu doin here? */}

@@ -3,28 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 export default function StudySessionScreen({ goHome, appState, setAppState }) {
     /*
         add list:
-            - session ending: add total cards gone through, parsed time, mastery feedbacks, etc.
-            X rejigger process so it intuitively lets you either SKIP or ANSWER (reveal), then rate-answer if non-skipped
-            X add show/hide timer toggle
-            X add cards done/sets done during as well as after, cuz FIGHTING CARDS
+            - styling and responsiveness at each step of the process:
+                > session overview sxn, semi-gridlike
+                > standardize/colorize 1-2-3
 
 
-        Woof, this is all a bit fuzzy and clunky. Refactor time. Let's walk it through:
-        X per card, we want to type out an answer, submit it, and then have feed back 1-2-3 mastery (or 0 if skipped)
-        X 'skipped' cards should set to mastery 0 and show the answer before moving on (not a true skip; goal is to learn)
-        X we'll have to rejigger the keyInputs a bit to de-escalate 'Enter' effects slightly and add 1-2-3 support
-        X disable inputs when doing 1-2-3
-        X cards not initially shuffled? (shuffled fine after first loop, though)
-        X 1-2-3 support (inverted keys, bigger doots to boop)
-        X text input for 'provide user explanation for prompt' scrolls mega awkwardly
-        X ongoing current session mastery level display (S - F? or N/A until at least one full set in)
-        X hm, let's NOT have "Enter" automatically "SKIP" by default, it's too easy to jam through accidentally
+        No more woof. It's no longer super clunky! It works pretty well, it's just a little rough around the edges. Great.
 
-        - add styled session-ending screen
-        - 'session overview' section at the top of the screen, possibly in semi-gridlike glory
-
-        STYLING:
-        - standardize/colorize the "1-2-3" buttons, remove light gray container line
 
         
 
