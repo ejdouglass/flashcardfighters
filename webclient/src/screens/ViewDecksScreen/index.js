@@ -35,12 +35,24 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
             -- what if the user wants to UPDATE their decks?
             -- hm, maybe a separate UPDATE CHECK functionality from the Decks screen
         */
+        // hm, names can change; we should check id
         if (appState?.decks[id]?.name) return alert(`You already have that deck in your collection. Although maybe it needs an update? We should have a warning for that.`);
         axios.post('/user/add_deck', { token: appState?.token, deckID: id })
             .then(res => {
                 let allDecksCopy = {...appState.decks};
                 allDecksCopy[id] = res.data.deck;
-                setAppState({...appState, decks: allDecksCopy, alertString: `Successfully added ${res.data.deck.name} to your decks!`});
+                let newLogItem = {
+                    echo: `You downloaded your very own personal copy of the public Deck known as ${res.data.deck.name}.`,
+                    timestamp: new Date(),
+                    event: 'deck_download',
+                    subject: res.data.deck.id
+                }
+
+                setAppState({...appState, decks: allDecksCopy, history: {
+                    ...appState.history,
+                    log: [...appState.history.log, newLogItem],
+                    actions: {...appState.history.actions, decksDownloaded: appState.history.actions.decksDownloaded + 1}
+                }, alertString: `Successfully added ${res.data.deck.name} to your decks!`});
             })
             .catch(err => console.log(`An error in retrieving a public deck has occurred: ${err}`));
     }

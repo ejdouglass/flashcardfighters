@@ -66,8 +66,18 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
                 // successful response handling here:
                 console.log(`DECK PUBLISH DATA RETURN FROM API: ${JSON.stringify(res.data)}`);
                 if (res.data.success) {
-                    // we previously re-set newDeck here; decide if there was a good reason for that, since the multiple settings disrupted the appState
-                    return setAppState(res.data.userData);
+                    let newLogItem = {
+                        echo: `You published ${newDeck.name} to the Great Online Repository of Good and Lovely and Also Helpful Decks.`,
+                        timestamp: new Date(),
+                        event: 'deck_publish',
+                        subject: newDeck.id
+                    }
+                   
+                    return setAppState({...res.data.userData, history: {
+                        ...appState.history,
+                        log: [...appState.history.log, newLogItem],
+                        actions: {...appState.history.actions, decksPublished: appState.history.actions.decksPublished + 1}
+                    }});
                 } else {
                     if (res.data?.alertString) return setAppState({...appState, alertString: res.data.alertString});
                 }
@@ -78,8 +88,17 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     function updateDeck() {
         axios.post('/deck/update', { token: appState.token, decksToUpdate: [{...newDeck}] })
             .then(res => {
+                let newLogItem = {
+                    echo: `You re-published ${newDeck.name} with your current version.`,
+                    timestamp: new Date(),
+                    event: 'deck_update',
+                    subject: newDeck.id
+                }                
                 // as long as appState is set first, this mildly abhorrent approach works a-ok!
-                setAppState({...appState, alertString: `Deck has been successfully updated!`});
+                setAppState({...appState, alertString: `The online version of this deck has been successfully updated!`, history: {
+                    log: [...appState.history.log, newLogItem],
+                    actions: {...appState.history.actions, decksUpdated: appState.history.actions?.decksUpdated ? appState.history.actions.decksUpdated + 1 : 1}
+                }});
                 return setNewDeck({...newDeck, lastPush: res.data.timestamp});
             })
             .catch(err => alert(`ERROR UPDATING DECK: ${err}`));
@@ -89,7 +108,17 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
         axios.post('/deck/unpublish', { token: appState?.token, deckID: newDeck.id })
             .then(res => {
                 if (res.data.success) {
-                    setAppState({...appState, alertString: `You have successfully unpublished this deck. It is no longer shared online.`});
+                    let newLogItem = {
+                        echo: `You unpublished ${newDeck.name}, removing it from the Great Online Repository.`,
+                        timestamp: new Date(),
+                        event: 'deck_creation',
+                        subject: newDeck.id
+                    }
+                    
+                    setAppState({...appState, alertString: `You have successfully unpublished this deck. It is no longer shared online.`, history: {
+                        log: [...appState.history.log, newLogItem],
+                        actions: {...appState.history.actions, decksUnpublished: appState.history.decksUnpublished + 1}
+                    }});
                     return setNewDeck({...newDeck, published: false, lastPush: undefined});
                 }
             })
@@ -99,24 +128,25 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     function saveNewDeck() {
         // This fxn is currently called on EVERY change to the deck, assuming a deck name has been created
         // That does mildly complicate our attempts to do a 'proper history action'... hm.
-        // OK! So! We'll do history shenanigans with a check to see if, while calling this, the deck already exists or not by id
-        // If does NOT exist, woo, new deck, save history.action of decksCreated +1 and history.log
         let newDeckFinalized = {...newDeck};
         if (!newDeckFinalized.name) newDeckFinalized.name = `Nameless Deck #${Object.keys(appState.decks).length + 1}`;
         let appStateCopy = JSON.parse(JSON.stringify(appState));
 
-        // LOLwhoops, this will save precisely the first character of the newDeck.name
-        // a few possible fixes... hm... the simplest is probably just 'forcing' deck naming to be complete before allowing card creation
-        // also can make an 'intelligent' sub-system for assessing log items and 'collapsing' similar events into the latest proper log event
-        // that sounds entertaining; let's try that!
-        let newLogItem = {
-            echo: `You began assembling a new Deck called ${newDeck.name}.`,
-            timestamp: new Date(),
-            event: 'deck_creation',
-            subject: newDeck.id
+        if (!editingDeck) {
+            let newLogItem = {
+                echo: `You began assembling a new Deck called ${newDeck.name}.`,
+                timestamp: new Date(),
+                event: 'deck_creation',
+                subject: newDeck.id
+            }
+            appStateCopy.history.log.push(newLogItem);
+            if (!appState.decks[newDeck.id]) {
+                appStateCopy.history.actions.decksCreated += 1;
+                console.log(`Updating decksCreated in history. Current total is ${appStateCopy.history.actions.decksCreated}`);
+            }
         }
-        appStateCopy.history.log.push(newLogItem);
-        
+
+ 
         appStateCopy.decks[newDeckFinalized.id] = newDeckFinalized;
         return setAppState(appStateCopy);
     }

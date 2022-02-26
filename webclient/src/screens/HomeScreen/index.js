@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
 export default function HomeScreen({ appState, setAppState }) {
@@ -6,6 +6,7 @@ export default function HomeScreen({ appState, setAppState }) {
         username: '',
         password: ''
     });
+    const activityLogRef = useRef(null);
 
 
     function logIn(e) {
@@ -17,6 +18,11 @@ export default function HomeScreen({ appState, setAppState }) {
             })
             .catch(err => alert(`ERROR LOGGING IN: ${err}`));
     }
+
+
+    useEffect(() => {
+        activityLogRef.current?.scrollIntoView({ behavior: 'smooth' });
+    });
 
 
     return (
@@ -40,10 +46,11 @@ export default function HomeScreen({ appState, setAppState }) {
                 </div>
             )}
 
-            <div style={{padding: '1rem', display: 'flex', width: '80%', justifyContent: 'center', flexDirection: 'column', border: '1px solid black', borderRadius: '5px'}}>
+            <div style={{padding: '1rem', display: 'flex', width: '80%', maxHeight: '60vh', overflow: 'scroll', boxSizing: 'border-box', justifyContent: 'center', flexDirection: 'column', border: '1px solid black', borderRadius: '5px'}}>
                 {appState.history.log.map((historyItem, index) => (
-                    <div key={index} style={{width: '100%', color: 'white', padding: '1rem', boxSizing: 'border-box', backgroundColor: '#0AF'}}>{historyItem.echo}</div>
+                    <div key={index} style={{width: 'calc(100% - 2rem)', margin: '1rem', color: 'white', padding: '1rem', boxSizing: 'border-box', backgroundColor: '#0AF'}}>{historyItem.echo}</div>
                 ))}
+                <div ref={activityLogRef} />
             </div>
 
             {/* HOME SCREEN MAIN ON: whatchu doin here? */}

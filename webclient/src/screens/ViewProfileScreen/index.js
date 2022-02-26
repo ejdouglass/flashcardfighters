@@ -62,8 +62,19 @@ export default function ViewProfileScreen({ appState, setAppState, fireAlert }) 
             currentDeckId: undefined,
             currentModeTargetID: undefined,
             schedule: {},
-            history: {}            
-        });
+            history: {
+              log: [],
+              actions: {
+                decksCreated: 0,
+                decksDeleted: 0,
+                decksDownloaded: 0,
+                decksPublished: 0,
+                decksUnpublished: 0,
+                sessionsCreated: 0,
+                sessionsStudied: 0        
+              }
+            }
+          });
     }
 
     return (

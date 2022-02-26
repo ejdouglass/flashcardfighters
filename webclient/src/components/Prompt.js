@@ -10,9 +10,21 @@ export default function Prompt({ appState, setAppState }) {
             case 'deleteDeck': {
                 if (userInput === 'n') return setAppState({...appState, globalPrompt: undefined});
 
-                let allDecksCopy = {...appState.decks};
-                delete allDecksCopy[appState.globalPrompt.target];
-                return setAppState({...appState, decks: {...allDecksCopy}, mode: 'viewDecks', globalPrompt: undefined});
+                // let allDecksCopy = {...appState.decks};
+                let appStateCopy = JSON.parse(JSON.stringify(appState));
+                let newLogItem = {
+                    echo: `You deleted the Deck called ${appState.decks[appState.globalPrompt.target].name}.`,
+                    timestamp: new Date(),
+                    event: 'deck_deletion',
+                    subject: appState.globalPrompt.target
+                }
+                appStateCopy.history.log.push(newLogItem);              
+                delete appStateCopy.decks[appState.globalPrompt.target];
+                appStateCopy.history.actions.decksDeleted += 1;
+
+                return setAppState({...appStateCopy, mode: 'viewDecks', globalPrompt: undefined});
+
+                // return setAppState({...appState, decks: {...allDecksCopy}, mode: 'viewDecks', globalPrompt: undefined});
             }
 
             case 'deleteProfile': {

@@ -86,6 +86,7 @@ export default function App() {
         decksDownloaded: 0,
         decksPublished: 0,
         decksUnpublished: 0,
+        decksUpdated: 0,
         sessionsCreated: 0,
         sessionsStudied: 0
       }
@@ -115,6 +116,8 @@ export default function App() {
       if (appState.history.log[appState.history.log.length - 1].event === appState.history?.log[appState.history.log.length - 2]?.event && appState.history.log[appState.history.log.length - 1].subject === appState.history?.log[appState.history.log.length - 2]?.subject) {
         // event and subject is the same, so we're going to assume these can be 'collapsed'
       
+        // right now we just take the 'latest version,' but at least in the case of creating decks, it makes sense to keep OG timestamp and new name
+        // it's not a critical or even likely highly noticeable difference for now; may adjust later, but keep an eye on other history items itm
         let collapsedHistoryLog = [...appState.history.log];
         collapsedHistoryLog.splice(collapsedHistoryLog.length - 2, 1);
         return setAppState({...appState, history: {...appState.history, log: collapsedHistoryLog}});
@@ -172,25 +175,31 @@ export default function App() {
 
 CURRENTLY: building out backend
 Final Checklist:
-[_] Add history object... define 'history moments,' as well as achievements key (or whatever we want to call it)
-  - hrm, should I do user/update in a side effect hook up above? 
-    -> many of the routes already 'save' the user on the backend anyway, so at this point it'd just be user.history
-    -> ok sure, let's give it a whirl
-  - achievements: { timestamp: __, name: __, description: __ }
+[_] Add history object and its functionalities
+  - achievements: { timestamp: __, name: __, description: __ }, actions:, log:
   - list of history 'events': create deck, grab public deck, publish deck, unpublish deck, delete deck, create session, finish session
     -> each item will have its own 'history details' ... the 'echo' for the item will include its object details, probably?
-    -> history: {log:, achievements:, datekey1:, datekey2:, datekeyEtc:}
+    -> history: {log:, actions:, }
+    -> history.actions is essentially a basic record of the 'major actions' user has taken, inclusive at least of all of the above
+      - also add 'interaction points,' such as tutorials, visiting/interacting with certain screens for the first time, etc.
     -> hm, do we even need dateKeys for this? hmm... for now, let's say nah, no need, just a LOG array is fine
     -> so every act can do a history.actions bump (decks created, for example), history.log bump, history.achivements check potentially
-    -> orrrr we could leave out achievements for now, as it's kind of outside the current scope of use
+        let newLogItem = {
+            echo: `You began assembling a new Deck called ${newDeck.name}.`,
+            timestamp: new Date(),
+            event: 'deck_creation',
+            subject: newDeck.id
+        }    
     -> the list:
-    [_] create deck
-    [_] delete deck
-    [_] grab public deck
-    [_] publish deck
-    [_] unpublish deck
-    [_] create session
-    [_] finish studying in a session
+      [x] create deck
+      [x] delete deck
+      [x] grab public deck
+      [x] publish deck
+      [x] unpublish deck
+      [x] update deck
+      [_] create session
+      [_] finish studying in a session
+  [_] adjust home screen display of history to be capped at some number of items and be scrollable (and fixed to bottom by default on page load)
   X add user/update route for cheerfully saving when history changes
 
 
@@ -206,7 +215,10 @@ Final Checklist:
 ..
 
 
-LIL FIXES/ADJUSTMENTS:
+SMALLER FIXES/ADJUSTMENTS:
+[_] Had to REFRESH to publish a new deck, otherwise didn't do anything or indicate any feedback anywhere...?
+[_] Tame the 'user/update' mechanism :P
+[_] Token is used quite a bit on the backend, but currently there is no proper token refresh mechanism
 [_] Better handling of attempting to Publish someone else's deck... or just making the option vanish (variant: true?)
 [_] If the user attempts to publish something that's already published and not update-worthy, kick out before running deck-adding code in server
 [_] Don't kick to 'decks' screen upon publishing, ESPECIALLY for cases where it's already published and nothing happens :P
@@ -216,7 +228,6 @@ LIL FIXES/ADJUSTMENTS:
 [_] axios error handling is currently pretty clumsy in all cases
 [_] forms where appropriate; offhand, 'create new profile' doesn't respond to [Enter/Return] properly
 ..
-[x] Search Public Decks should autoFocus on the search field when selected
 
 
 ???
