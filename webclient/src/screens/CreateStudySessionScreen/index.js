@@ -22,10 +22,6 @@ export default function CreateStudySessionScreen({ fireAlert, generateRandomID, 
     }
 
     function createStudySession() {
-        // HERE: 
-        // check for validity of session (nickname, at least one deck, rules selected [eh have defaults for these])
-        // if INVALID, fire off an alert for the user indicating this
-        // if VALID, create ID, save to appState, 
         if (session.nickname.length < 1) return fireAlert(`Please enter a nickname for this session.`);
         if (session.deckRefs.length < 1) return fireAlert(`Please select at least one deck to use for the study session.`);
         let newAppSessions = {...appState.sessions} || {};
@@ -33,7 +29,16 @@ export default function CreateStudySessionScreen({ fireAlert, generateRandomID, 
         let newSessionID = generateRandomID();
         newAppSessions[newSessionID] = {...session, id: newSessionID};
         // console.log(`FINAL FORM OF NEWAPPSESSIONS SHOULD BE: ${JSON.stringify(newAppSessions)}`)
-        return setAppState({...appState, sessions: {...newAppSessions}, mode: 'viewStudySessions', alertString: `New study session created. GRIND YOUR INT!`});
+        let newLogItem = {
+            echo: `You created a new study session entitled ${session.nickname}. May it guide your personal growth effectively.`,
+            timestamp: new Date(),
+            event: 'session_creation',
+            subject: newSessionID
+        }      
+        return setAppState({...appState, sessions: {...newAppSessions}, mode: 'viewStudySessions', alertString: `New study session created. GRIND YOUR INT!`, history: {
+            log: [...appState.history.log, newLogItem],
+            actions: {...appState.history.actions, sessionsCreated: appState.history.actions.sessionsCreated + 1}
+        }});
         // console.log(`New App Sessions looks like this now: ${JSON.stringify(appState.sessions)}`);
         
     }

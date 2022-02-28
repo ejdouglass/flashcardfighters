@@ -133,17 +133,15 @@ export default function App() {
   }, [appState.history.log]);
 
   useEffect(() => {
-    // CHAOS SAVING... not a production-worthy approach, but fine for current dev needs
     if (firstPaint.current === true) {
       // console.log(`First render occurring now, NO saving app data`);
       return firstPaint.current = false;
     }
 
-    console.log(`Something save-worthy has changed.`);
+    // console.log(`Something save-worthy has changed.`);
     // new Profile creation triggers this useEffect several times almost simultaneously, so maybe building in a lastSave timestamp / check would help
     // may also blunt the effect of 'stripping away' backend-provided alertString/alertType situations
 
-    // console.log(`appState has changed, not first paint currently, so saving app data...`);
     return saveApp();
 
   }, [appState.decks, appState.mode, appState.sessions, appState.history]);
@@ -175,34 +173,6 @@ export default function App() {
 
 CURRENTLY: building out backend
 Final Checklist:
-[_] Add history object and its functionalities
-  - achievements: { timestamp: __, name: __, description: __ }, actions:, log:
-  - list of history 'events': create deck, grab public deck, publish deck, unpublish deck, delete deck, create session, finish session
-    -> each item will have its own 'history details' ... the 'echo' for the item will include its object details, probably?
-    -> history: {log:, actions:, }
-    -> history.actions is essentially a basic record of the 'major actions' user has taken, inclusive at least of all of the above
-      - also add 'interaction points,' such as tutorials, visiting/interacting with certain screens for the first time, etc.
-    -> hm, do we even need dateKeys for this? hmm... for now, let's say nah, no need, just a LOG array is fine
-    -> so every act can do a history.actions bump (decks created, for example), history.log bump, history.achivements check potentially
-        let newLogItem = {
-            echo: `You began assembling a new Deck called ${newDeck.name}.`,
-            timestamp: new Date(),
-            event: 'deck_creation',
-            subject: newDeck.id
-        }    
-    -> the list:
-      [x] create deck
-      [x] delete deck
-      [x] grab public deck
-      [x] publish deck
-      [x] unpublish deck
-      [x] update deck
-      [_] create session
-      [_] finish studying in a session
-  [_] adjust home screen display of history to be capped at some number of items and be scrollable (and fixed to bottom by default on page load)
-  X add user/update route for cheerfully saving when history changes
-
-
 [_] Do -something- with the HomeScreen -- likely a little mini-tutorial if not logged in, a welcome and guide
 [_] Rejigger responsiveness and scalability, especially in the cards themselves, to allow longer-form content
 [_] Basic tuts/guides/how-to-use info, maximum user friendliness (consider either per-page/appState.mode "?" button or general help/how-to page)
@@ -211,18 +181,22 @@ Final Checklist:
   - consider consolidating Home/Profile? (thinking of mobile screen being way itty-bittier)
 [_] Prettify (alerts, prompts, styling, etc.), including responsiveness considerations across mobile formats & final folio page layout concerns
   -- play with no console, console, and console-mobile-emulation modes to see where things 'break' a bit
+  -- sessions are just tools... maybe have "do" or "edit" on sessions page, with chance to 'favorite' them to scoot them to the top?
+    -> favorite sessions can pop up on Home/Profile?
+  -- replace "Home" with "Profile"? Or somewhat merge their concerns, at least.
 [_] Final 'walkthrough' with fresh app -- create, log out, log in, use every part of the app and make sure it works as expected
 ..
+[x] Add history object and its functionalities
 
 
 SMALLER FIXES/ADJUSTMENTS:
 [_] Had to REFRESH to publish a new deck, otherwise didn't do anything or indicate any feedback anywhere...?
 [_] Tame the 'user/update' mechanism :P
+[_] Consider a mechanism where reshuffling doesn't risk showing the same card twice (finish a set with one card, having it reshuffle to index 0 for next round)
 [_] Token is used quite a bit on the backend, but currently there is no proper token refresh mechanism
 [_] Better handling of attempting to Publish someone else's deck... or just making the option vanish (variant: true?)
 [_] If the user attempts to publish something that's already published and not update-worthy, kick out before running deck-adding code in server
 [_] Don't kick to 'decks' screen upon publishing, ESPECIALLY for cases where it's already published and nothing happens :P
-[_] consolidate the 'search for decks' bar on the Decks page
 [_] should add a 'Publish Changes' button to decks, so that 'shared decks' can update properly but NOT on-the-fly like they do in the client
 [_] we should probably NOT allow empty decks to be published :P
 [_] axios error handling is currently pretty clumsy in all cases
@@ -241,7 +215,6 @@ RUH ROH?
   - probably have to take a look at the logic of 'shared: true' and ensure it ONLY applies to the client, not as a deck variable
 [_] 'Delete This Deck' probably should NOT appear before the deck is actually created :P
 ..
-[x] deck.published doesn't show properly for user to indicate proper ownership/published status?
 
 
 

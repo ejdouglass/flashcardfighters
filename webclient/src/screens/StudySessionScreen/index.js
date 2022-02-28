@@ -199,6 +199,17 @@ export default function StudySessionScreen({ goHome, appState, setAppState }) {
 
         */
        allDone.current = true;
+       // NOTE: we need to inherit the nickname and id of the session in question to properly create this particular log item.
+       let newLogItem = {
+        echo: `You wrapped up a study session after mightily fighting cards for ${parseSecondsToHMS(timer, true)}.`,
+        timestamp: new Date(),
+        event: 'session_studied',
+        subject: 'studyness'
+        }      
+       setAppState({...appState, history: {
+           log: [...appState.history.log, newLogItem],
+           actions: {...appState.history.actions, sessionsStudied: appState.history.actions.sessionsStudied + 1}
+       }})
        return setSessionFinished(true);
     }
 

@@ -6,6 +6,8 @@ export default function HomeScreen({ appState, setAppState }) {
         username: '',
         password: ''
     });
+    const [derivedActivityLog, setDerivedActivityLog] = useState(['Bork']);
+    const [activityLogPage, setActivityLogPage] = useState(undefined);
     const activityLogRef = useRef(null);
 
 
@@ -19,10 +21,27 @@ export default function HomeScreen({ appState, setAppState }) {
             .catch(err => alert(`ERROR LOGGING IN: ${err}`));
     }
 
+    function handlePageChange(amount) {
+        if (activityLogPage + amount > Math.floor(appState.history.log.length / 10)) amount = Math.ceil(appState.history.log.length / 10);
+        if (activityLogPage + amount < 0) amount = 0;
+        setActivityLogPage(activityLogPage + amount);
+    }
+
 
     useEffect(() => {
         activityLogRef.current?.scrollIntoView({ behavior: 'smooth' });
     });
+
+    useEffect(() => {
+        let reversedArray = [...appState.history.log].reverse();
+        let targetIndex = activityLogPage * 10;
+        return setDerivedActivityLog(reversedArray.slice(targetIndex, targetIndex + 11).reverse());
+        
+    }, [activityLogPage]);
+
+    useEffect(() => {
+        setActivityLogPage(0);
+    }, []);
 
 
     return (
@@ -31,6 +50,16 @@ export default function HomeScreen({ appState, setAppState }) {
             {appState?.username ? (
                 <div>
                     <div>Logged in! But, uh, you probably knew that already. Upper Right! :-D</div>
+                    <div style={{padding: '1rem', display: 'flex', width: '100%', height: '50vh', overflow: 'scroll', boxSizing: 'border-box', flexDirection: 'column', border: '1px solid black', borderRadius: '5px'}}>
+                        {derivedActivityLog.map((historyItem, index) => (
+                            <div key={index} style={{display: 'flex', flexWrap: 'wrap', height: 'auto', margin: '1rem', color: 'white', padding: '1rem', boxSizing: 'border-box', backgroundColor: '#0AF'}}>{index}:{historyItem.echo}</div>
+                        ))}
+                        <div ref={activityLogRef} />
+                    </div>
+                    <button onClick={() => setActivityLogPage(Math.floor(appState.history.log.length / 10))}>BOOP</button>
+                    <button onClick={() => handlePageChange(-1)}>Page LESS</button> 
+                    <button onClick={() => handlePageChange(1)}>Page MOAR</button>
+                    
                 </div>
             ) : (
                 <div>
@@ -46,14 +75,8 @@ export default function HomeScreen({ appState, setAppState }) {
                 </div>
             )}
 
-            <div style={{padding: '1rem', display: 'flex', width: '80%', maxHeight: '60vh', overflow: 'scroll', boxSizing: 'border-box', justifyContent: 'center', flexDirection: 'column', border: '1px solid black', borderRadius: '5px'}}>
-                {appState.history.log.map((historyItem, index) => (
-                    <div key={index} style={{width: 'calc(100% - 2rem)', margin: '1rem', color: 'white', padding: '1rem', boxSizing: 'border-box', backgroundColor: '#0AF'}}>{historyItem.echo}</div>
-                ))}
-                <div ref={activityLogRef} />
-            </div>
 
-            {/* HOME SCREEN MAIN ON: whatchu doin here? */}
+
 
             {/* <button style={{width: '200px', padding: '0.5rem', marginTop: '1rem'}} onClick={() => setAppState({...appState, mode: 'viewNotes'})}>Review Notes</button>
             <br /> */}
