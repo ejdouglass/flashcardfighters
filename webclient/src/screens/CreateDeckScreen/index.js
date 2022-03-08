@@ -18,7 +18,7 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
         variant: false,
         lastUpdateTime: undefined,
         name: '',
-        tags: '', // for later online searching; add when convenient; can also 'derive' from card content, potentially
+        tags: '',
         description: '',
         published: false,
         cards: [],
@@ -37,6 +37,7 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     const [cardViewMode, setCardViewMode] = useState('prompt');
     const [cardSearch, setCardSearch] = useState('');
     const promptRef = useRef(null);
+    const explanationRef = useRef(null);
     const lastPushRef = useRef(null);
 
     function createNewCard(e) {
@@ -56,15 +57,16 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
 
     function publishDeck() {
         // This function should only be callable if the user has an appState.token; 
-        if (appState.token === undefined) return alert(`Gotta create a Profile before you can publish decks online.`);
-
+        
+        if (appState.token === undefined) return setAppState({...appState, alertString: `Gotta create a Profile before you can publish decks online.`});
+        
         // Since this is through a single-deck-editing screen, we can cheerfully only worry about the one deck present here for all uploading/updating considerations
-
         // NOTE: id may not be defined yet, which... causes issues, it seems? Maybe? Maybe not? Testing...
         axios.post('/deck/publish', { token: appState.token, decksToAdd: [{...newDeck}] })
             .then(res => {
+                
                 // successful response handling here:
-                console.log(`DECK PUBLISH DATA RETURN FROM API: ${JSON.stringify(res.data)}`);
+                // console.log(`DECK PUBLISH DATA RETURN FROM API: ${JSON.stringify(res.data)}`);
                 if (res.data.success) {
                     let newLogItem = {
                         echo: `You published ${newDeck.name} to the Great Online Repository of Good and Lovely and Also Helpful Decks.`,
@@ -128,8 +130,11 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     function saveNewDeck() {
         // This fxn is currently called on EVERY change to the deck, assuming a deck name has been created
         // That does mildly complicate our attempts to do a 'proper history action'... hm.
+
+        if (!newDeck.name) return setNewDeck({...newDeck, name: `Nameless Deck #${Object.keys(appState.decks).length + 1}`});
+
         let newDeckFinalized = {...newDeck};
-        if (!newDeckFinalized.name) newDeckFinalized.name = `Nameless Deck #${Object.keys(appState.decks).length + 1}`;
+        // if (!newDeckFinalized.name) newDeckFinalized.name = `Nameless Deck #${Object.keys(appState.decks).length + 1}`;
         let appStateCopy = JSON.parse(JSON.stringify(appState));
 
         if (!editingDeck) {
@@ -144,6 +149,7 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
                 appStateCopy.history.actions.decksCreated += 1;
                 console.log(`Updating decksCreated in history. Current total is ${appStateCopy.history.actions.decksCreated}`);
             }
+            editingDeck = true;
         }
 
  
@@ -180,12 +186,9 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     }, []);
 
     useEffect(() => {
-        // THIS: gonna 'save' the deck on any substantive change, using saveNewDeck(); replaces save button
-        // BEWARE WILD FIRST-PAINT SAVES; we only want the fxn called when the user -actually- changes something intentionally
-        // while we could use a ref to calculate first paint as elsewhere, I think we're better off hax-ing newDeck.name
-        // IF there is no name, we just don't save
-        // in the long term, it'd be wiser to develop a more nuanced solution, however
-        if (newDeck.name.length > 0) return saveNewDeck();
+        // CHAOS SAVING: we're gonna try to amend it so that it only saves assuming that we have at least one card made instead of a name
+        if (newDeck.cards.length > 0) return saveNewDeck();
+        // if (newDeck.name.length > 0) return saveNewDeck();
     }, [newDeck]);
 
     useEffect(() => {
@@ -202,33 +205,33 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
 
     return (
         
-        <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', boxSizing: 'border-box'}}>
+        <div style={{display: 'flex', flexWrap: 'wrap', flexDirection: 'column', alignItems: 'center', gap: '1rem', boxSizing: 'border-box'}}>
 
 
 
-            <div id="deckStuffHolder" style={{display: 'flex', flexDirection: 'column', width: '100%'}}>
+            <div id="deckStuffHolder" style={{display: 'flex', flexWrap: 'wrap', flexDirection: 'column', width: '100%'}}>
 
                 <div style={{display: 'flex', width: '100%', fontSize: '1.4rem', fontWeight: '600'}}>
                     Deck Summary
                 </div>
 
-                <div style={{display: 'flex', flexDirection: 'row', gap: '1rem'}}>
+                <div style={{display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '1rem'}}>
 
-                    <div id="deckPreview" style={{boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '330px', height: '198px', backgroundColor: '#0AF', borderRadius: '5%'}}>
+                    <div id="deckPreview" style={{boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', height: '198px', backgroundColor: '#0AF', borderRadius: '5%'}}>
                         <input type='text' value={newDeck.name} style={{fontSize: '1rem', textAlign: 'center'}} autoFocus={newDeck.name.length === 0} placeholder={`Nameless Deck #${Object.keys(appState.decks).length + 1}`} onChange={e => setNewDeck({...newDeck, name: e.target.value})} />
                         <div style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Card Total: {newDeck.cards.length}</div>
                     </div>
 
                     <div style={{display: 'flex', gap: '1rem'}}>                
-                        <textarea type='text' rows={5} placeholder={'Deck Description'} style={{boxSizing: 'border-box', resize: 'none', fontSize: '1.2rem', padding: '0.5rem 1rem', width: '300px', fontFamily: 'sans-serif'}} value={newDeck.description} onChange={e => setNewDeck({...newDeck, description: e.target.value})} />
+                        <textarea type='text' rows={5} placeholder={'Deck Description'} style={{boxSizing: 'border-box', resize: 'none', fontSize: '1.2rem', padding: '0.5rem 1rem', fontFamily: 'sans-serif'}} value={newDeck.description} onChange={e => setNewDeck({...newDeck, description: e.target.value})} />
                     </div>
 
-                    <div id="deckButtonsOne" style={{display: 'flex', flexDirection: 'column'}}>
-                        <button onClick={deleteDeck} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>DELETE THIS DECK</button>
+                    <div id="deckButtonsOne" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                        <button onClick={deleteDeck}>DELETE THIS DECK</button>
                         {newDeck.published ? (
-                            <button onClick={updateDeck} disabled={!appState.username} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>UPDATE THIS DECK</button>
+                            <button onClick={updateDeck} disabled={!appState.username}>UPDATE THIS DECK</button>
                         ) : (
-                            <button onClick={publishDeck} disabled={!appState.username} style={{padding: '0.5rem 1rem', height: '100px', alignSelf: 'center', fontSize: '1.2rem', fontWeight: '600', backgroundColor: 'hsl(350,90%,60%)', color: "white"}}>PUBLISH THIS DECK</button>
+                            <button onClick={() => publishDeck()} disabled={!appState.username}>PUBLISH THIS DECK</button>
                         )}
                         
                     </div>
@@ -251,14 +254,20 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
 
                 <div style={{display: 'flex', flexDirection: 'column', width: '100%', justifyContent: 'center', alignItems: 'center', gap: '1rem'}}>
                         
-                        <div id='newCardSingle' style={{width: '500px', height: '300px', display: 'flex', flexDirection: 'column', borderRadius: '10px', backgroundColor: '#0AF'}}>
-                            <div id='topOfNewCard' style={{border: '1px solid black', boxSizing: 'border-box', height: '30%', width: '100%', textAlign: 'center', backgroundColor: '#07D', color: 'white', borderRadius: '10px 10px 0 0'}}>
+                        {/* Aha! Finally got the right combination of factors to allow card-resizing. Hoo boy. Ensure a max-width so the horizontal swelling is bounded. */}
+                        <div id='newCardSingle' style={{minHeight: '300px', width: 'calc(150px + 30vw)', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', borderRadius: '10px', backgroundColor: '#0AF'}}>
+                            
+                            <div id='topOfNewCard' style={{border: '1px solid black', boxSizing: 'border-box', minHeight: '30%', width: '100%', textAlign: 'center', backgroundColor: '#07D', color: 'white', borderRadius: '10px 10px 0 0'}}>
                                 <textarea ref={promptRef} type='text' style={{boxSizing: 'border-box', color: 'white', width: '100%', outline: 'none', border: 'none', backgroundColor: 'transparent', textAlign: 'center', padding: '0.5rem 1rem', fontFamily: 'sans-serif', resize: 'none', fontSize: '1.2rem'}} ref={promptRef} value={newCard.prompt} onChange={e => setNewCard({...newCard, prompt: e.target.value})} placeholder={'Card Front/Prompt'} />
                             </div>
 
-                            <div id='bottomOfNewCard' style={{width: '100%', textAlign: 'center'}}>
-                                <textarea type='text' rows={3 + Math.floor(newCard.explanation.length / 50)} style={{paddingTop: '0.5rem', color: 'white', outline: 'none', border: 'none', backgroundColor: 'transparent', textAlign: 'center', padding: '0.5rem 1rem', fontFamily: 'sans-serif', resize: 'none', fontSize: '1.2rem'}} value={newCard.explanation} onChange={e => setNewCard({...newCard, explanation: e.target.value})} placeholder={'Card Back/Explanation'} />
+                            <div id='bottomOfNewCard' onClick={() => explanationRef.current.focus()} style={{display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', boxSizing: 'border-box', width: '100%', color: 'white', fontSize: '1rem', minHeight: '150px', fontWeight: '600', position: 'relative'}}>
+                                <p style={{resize: 'none', display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', color: 'white', fontSize: '1rem', fontWeight: '600', boxSizing: 'border-box', height: '100%', width: '100%', padding: '0', margin: '0', backgroundColor: 'black', zIndex: '9'}} >{newCard.explanation}</p>
+                                <input ref={explanationRef} onChange={e => setNewCard({...newCard, explanation: e.target.value})} type='text' style={{opacity: '0', position: 'absolute', resize: 'none', display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', color: 'white', fontSize: '1rem', fontWeight: '600', boxSizing: 'border-box', height: '100%', width: '100%', padding: '0', margin: '0', background: 'transparent'}} />
+                                {/* <textarea type='text' ref={explanationRef} style={{position: 'absolute', width: '100%', height: '100%', background: 'transparent', border: 'none', resize: 'none'}} value={''} onKeyDown={e => doShenanigans(e)} />
+                                <div style={{position: 'absolute', width: '100%', minHeight: '100px', border: '1px solid red'}}>{newCard.explanation || `Card Back/Explanation`}</div> */}
                             </div>
+
                         </div>
 
                         <button style={{padding: '0.5rem 1rem', fontSize: '1.2rem', fontWeight: '600'}} onClick={createNewCard}>Create Card</button>

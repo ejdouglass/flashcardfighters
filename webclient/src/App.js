@@ -6,7 +6,6 @@ import axios from 'axios';
 // import './App.css';
 
 export default function App() {
-  // consider amending 'currentDeckId' to 'currentModeTargetID' so it generalizes to card viewing, session viewing, etc.
   const [appState, setAppState] = useState({
     username: undefined,
     alertString: ``,
@@ -50,13 +49,9 @@ export default function App() {
   function saveApp() {
     // MIGHT have/want to strip off current alertString, globalPrompt
     // depending on when this is called, can also do a backend check to see if we 'want' to have it foist contents upon the API
-    //  ... think this one through before implementing, however, as there may be conditions where force-saving could be really unfortunate :P
-    //  ... alternatively, can do 'periodic saves' OR 'user-directed saves,' both of which would be safer than this useEffect-hooked saving
 
-    // what if we did NOT strip off the alertString? hmmm
-    // setAppState({...appState, alertString: undefined, globalPrompt: undefined});
+
     let savedAppState = {...appState};
-    // savedAppState.alertString = undefined;
     savedAppState.globalPrompt = undefined;
     return localStorage.setItem('flashcardfighterApp', JSON.stringify(savedAppState));
   }
@@ -93,13 +88,15 @@ export default function App() {
 
       setAppState(appData);
     }
+    return firstPaint.current = false;
 
   }, []);
 
   useEffect(() => {
+    // console.log(`firstPaint.current is ${firstPaint.current}`);
     if (firstPaint.current) return;
-    // NOTE: we're getting save errors with wild abandon here, so uh maybe let's check on that
-    // also, simple refreshes of the page are pinging the backend, which is... not ideal
+    // NOTE: this is part of a delicate ecosystem of interlocking side effects and the firstPaint ref, so be very careful about moving any of these pieces
+
     if (appState.username && appState.token && appState.history.log.length) {
 
       // HERE: analyze and collapse log items
@@ -120,46 +117,51 @@ export default function App() {
         // it's not a critical or even likely highly noticeable difference for now; may adjust later, but keep an eye on other history items itm
         let collapsedHistoryLog = [...appState.history.log];
         collapsedHistoryLog.splice(collapsedHistoryLog.length - 2, 1);
+        // console.log(`Just collapsing some history here, don't mind me.`);
         return setAppState({...appState, history: {...appState.history, log: collapsedHistoryLog}});
       }
 
-      return axios.post('/user/update', { userAppData: appState })
-        .then(res => {
-          // currently not expecting a response here :P
-          console.log(res);
-        })
-        .catch(err => console.log(`Error updating user: `, err));
+      // can add further collapsing functionality, such as deck editing (adding cards), etc. in the future
+
+
+      // The below is quarantined for general app safety. :P 
+      // return axios.post('/user/update', { userAppData: appState })
+      //   .then(() => {
+      //     // currently not expecting a response here :P
+      //     return console.log(`User update pushed to back-end.`);
+      //   })
+      //   .catch(err => console.log(`Error updating user: `, err));
     }
   }, [appState.history.log]);
 
   useEffect(() => {
-    if (firstPaint.current === true) {
-      // console.log(`First render occurring now, NO saving app data`);
-      return firstPaint.current = false;
-    }
+    if (firstPaint.current === true) return;
 
-    // console.log(`Something save-worthy has changed.`);
-    // new Profile creation triggers this useEffect several times almost simultaneously, so maybe building in a lastSave timestamp / check would help
-    // may also blunt the effect of 'stripping away' backend-provided alertString/alertType situations
+    // firstPaint ref is woefully under-equipped to handle our latest shenanigans here :P
 
+    // console.log(`I am called upon to SAVE, with appState:`, appState);
     return saveApp();
 
-  }, [appState.decks, appState.mode, appState.sessions, appState.history]);
+    // tentative: removed appState.history from the dependency array below
+  }, [appState.decks, appState.mode, appState.sessions]);
 
 
   return (
     <div>
-      {/* the 'header' in gloriously messy fashion for now; consider making it a fixed position element */}
-      <div style={{borderBottom: '1px solid #07D', position: 'fixed', zIndex: '8', width: '100%', display: 'flex', gap: '1rem', color: 'white', fontSize: '1.5rem', boxSizing: 'border-box', padding: '1rem', backgroundColor: '#0AF', height: '100px'}}>
-        <button onClick={() => setAppState({...appState, mode: undefined})} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '1rem', fontWeight: '600', fontSize: '1.5rem', borderRadius: '4px', border: 'none'}}>HOME</button>
-        <button onClick={() => setAppState({...appState, mode: 'viewDecks'})} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '1rem', fontWeight: '600', fontSize: '1.5rem', borderRadius: '4px', border: 'none'}}>DECKS</button>
-        <button onClick={() => setAppState({...appState, mode: 'viewStudySessions'})} style={{display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '1rem', fontWeight: '600', fontSize: '1.5rem', borderRadius: '4px', border: 'none'}}>STUDY</button>
-        <div id="userContainer" style={{display: 'flex', justifyContent: 'flex-end', width: '100%', height: '100%', alignItems: 'center'}}>
-          <button onClick={() => setAppState({...appState, mode: 'viewProfile'})} style={{boxSizing: 'border-box', display: 'flex', justifyContent: 'center', alignItems: 'center', width: 'auto', height: '50px', border: '2px solid white', padding: '2rem', fontSize: '1.5rem', fontWeight: '600'}}>{appState?.username ? appState.username : 'Profile'}</button>
+
+      <div style={{borderBottom: '1px solid #07D', width: '100%', display: 'flex', gap: '1rem', color: 'white', boxSizing: 'border-box', padding: '1rem', backgroundColor: '#0AF', minHeight: '100px', flexWrap: 'wrap'}}>
+       
+        <div id="userContainer" style={{display: 'flex', justifyContent: 'flex-end', alignItems: 'center'}}>
+          <button onClick={() => setAppState({...appState, mode: undefined})} style={{fontSize: 'calc(0.8rem + 0.4vw)', boxSizing: 'border-box', display: 'flex', justifyContent: 'center', alignItems: 'center', width: 'auto', height: '50px', border: appState.mode === undefined ? '2px solid blue' : '2px solid white', padding: '2rem', borderRadius: '5px', fontWeight: '600'}}>{appState?.username ? appState.username : 'Profile'}</button>
         </div>
+        <div id="headerButtons" style={{display: 'flex', gap: '1rem'}}>
+          <button onClick={() => setAppState({...appState, mode: 'viewDecks'})} style={{fontSize: 'calc(0.8rem + 0.4vw)', display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '1rem', fontWeight: '600', borderRadius: '4px', border: appState.mode === 'viewDecks' ? '2px solid blue' : '2px solid white'}}>DECKS</button>
+          <button onClick={() => setAppState({...appState, mode: 'viewStudySessions'})} style={{fontSize: 'calc(0.8rem + 0.4vw)', display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '1rem', fontWeight: '600', borderRadius: '4px', border: appState.mode === 'viewStudySessions' ? '2px solid blue' : '2px solid white'}}>STUDY</button>          
+        </div>    
+
       </div>
 
-      <div style={{boxSizing: 'border-box', position: 'relative', width: '100%', top: '100px', padding: '1rem'}}>
+      <div style={{boxSizing: 'border-box', position: 'relative', width: '100%', padding: '1rem'}}>
         <Prompt appState={appState} setAppState={setAppState} />
         <Screen appState={appState} setAppState={setAppState} />
         <Alert alertString={appState.alertString} clearAlert={clearAlert} />
@@ -173,48 +175,73 @@ export default function App() {
 
 CURRENTLY: building out backend
 Final Checklist:
-[_] Do -something- with the HomeScreen -- likely a little mini-tutorial if not logged in, a welcome and guide
-[_] Rejigger responsiveness and scalability, especially in the cards themselves, to allow longer-form content
-[_] Basic tuts/guides/how-to-use info, maximum user friendliness (consider either per-page/appState.mode "?" button or general help/how-to page)
-  - ideally define a few 'phases' of app engagement (logical steps and order they're likely to occur and/or coincide in) with relevant HomeScreen info
-  - can also have a "!" appear on the HomeScreen and/or Profile Link Button
-  - consider consolidating Home/Profile? (thinking of mobile screen being way itty-bittier)
 [_] Prettify (alerts, prompts, styling, etc.), including responsiveness considerations across mobile formats & final folio page layout concerns
-  -- play with no console, console, and console-mobile-emulation modes to see where things 'break' a bit
-  -- sessions are just tools... maybe have "do" or "edit" on sessions page, with chance to 'favorite' them to scoot them to the top?
-    -> favorite sessions can pop up on Home/Profile?
-  -- replace "Home" with "Profile"? Or somewhat merge their concerns, at least.
+  [x] basic responsiveness 1: single-column for narrow views, can have inner divs of certain width, use flex-wrap where applicable
+  [x] basic responsiveness 2: fontsizing @ rems
+  [x] history/activity homepage container: add timestamp parsing, 'older' 'newer' buttons (with 'Newest' displayed when at cap)
+  [_] Denote favorite sessions as being favorite sessions rather than funny mystery buttons :P
+  [x] cardfix - allow card styling to scale to contents better, far less padding, figure out how to let overflow stretch card
+  [x] Flesh out the Alert and Prompt to be less aggressively hideous
+  [_] Helpful alerts/prompts where applicable (for example, failure to log in is currently a butt-ugly alert :P)
+  [_] Highlight HOME, DECKS, and STUDY when they're currently in use
+  [_] Add notations and/or visual guides to which decks are PUBLISHED, ONLINE-SOURCED, etc.
+
+
+[_] Basic guiding
+  [_] "?" button in corner on all engagement pages, front-page "How To Cardfight" (new prompt type: informational or info)
+  [_] Finish WELCOME MESSAGE (basic for now)
+[_] Review fixes & adjustments, address the most concerning items
 [_] Final 'walkthrough' with fresh app -- create, log out, log in, use every part of the app and make sure it works as expected
 ..
-[x] Add history object and its functionalities
+[x] HomeScreen & base layout overhaul - merge with Profile concerns
 
 
-SMALLER FIXES/ADJUSTMENTS:
-[_] Had to REFRESH to publish a new deck, otherwise didn't do anything or indicate any feedback anywhere...?
-[_] Tame the 'user/update' mechanism :P
-[_] Consider a mechanism where reshuffling doesn't risk showing the same card twice (finish a set with one card, having it reshuffle to index 0 for next round)
+FIXES & ADJUSTMENTS:
+[_] Re-introduce user/update functionality - hook it into known substantive app engagement points is ideal (though obviously check for basic username/etc.)
+  NOTE: any of the below can be X'd if the backend already does a save and pushes new user data
+  [_] Substantial deck change (each new card added; little card fixes are trickier, however)
+  [x] New study session created
+  [_] Study session completed
+  [_] Deck published
+  [_] Deck unpublished
+  [_] Logout
+[_] Logging out appears to totally wipe all extant sessions out of existence. Same with history log. Probably due to lack of user/update calls... :P
+  - do a quick check of what current actions (such as publishing) properly save the user on the backend; then figure out a good way to user/update, test for breakage
+[_] Starting a new study session causes a very brief but visible screen flicker/hiccup/render cascade ("Loading session...")
+[_] Consider and test the case where user starts making cards BEFORE naming the deck, etc.
+[_] Public searching is a little wonky? Test the public deck searching behavior.
 [_] Token is used quite a bit on the backend, but currently there is no proper token refresh mechanism
+[_] Consider a mechanism where reshuffling doesn't risk showing the same card twice (finish a set with one card, having it reshuffle to index 0 for next round)
 [_] Better handling of attempting to Publish someone else's deck... or just making the option vanish (variant: true?)
 [_] If the user attempts to publish something that's already published and not update-worthy, kick out before running deck-adding code in server
 [_] Don't kick to 'decks' screen upon publishing, ESPECIALLY for cases where it's already published and nothing happens :P
-[_] should add a 'Publish Changes' button to decks, so that 'shared decks' can update properly but NOT on-the-fly like they do in the client
 [_] we should probably NOT allow empty decks to be published :P
 [_] axios error handling is currently pretty clumsy in all cases
 [_] forms where appropriate; offhand, 'create new profile' doesn't respond to [Enter/Return] properly
-..
-
-
-???
-[_] Color scheme
-[_] Best way to visually denote 'currently active' tab, selection, etc.
-
-
-RUH ROH?
 [_] Local deletion of decks does NOT properly let the backend know... this is particularly pertinent for Variant Decks
-[_] 'downloaded from public' deck are getting the 'shared' flag automatically set, but it's likely being misapplied, since that user didn't necessarily share it
-  - probably have to take a look at the logic of 'shared: true' and ensure it ONLY applies to the client, not as a deck variable
-[_] 'Delete This Deck' probably should NOT appear before the deck is actually created :P
+[_] Ensure all history.log items match 1-to-1 with any alerts the user receives, so alerts disappearing doesn't just mean "whoopsie might have missed that one"
 ..
+[x] Deck publishing is un-borked (borking user updates in the meantime, whoops)
+
+
+
+PENDING RELEASE CONCEPTS:
+[_] Study session deletion. :P
+[_] basic palette implementation
+[_] Public sharing of sessions (slightly trickier as it would require more deck-checking)
+[_] App periodically checking for cloned deck updates, showing a "!" or somesuch when applicable
+[_] Animations/transitions (and likely simple implementation of styled-components file alongside that)
+[_] More details on the study sessions (most basic level would be decks included, later on maybe descriptions/tags/meta-data)
+[_] Upgraded tutorial engagement
+  [_] Define 'phases' of app engagement in linear fashion to begin with
+    - total first-time in app: Welcome! This App is about X. To get started, head over to Decks tab!
+    - how to implement tutorialTracking? Hmmm... 
+  [_] "?" button concept... unobtrusive corner buttons, OR dootdootdoot pop-ups
+  [_] Glowing button highlight for "go here, dummy"
+  -- "Global"/tracking tutorials are probably for 'next release' after testing on Heroku first. Homescreen only for now, but build with page-by-page in mind.
+  -- Also maybe a 'tuts scroll' type concept when there's no pressing/particular suggestion (linear basics covered already).
+..
+
 
 
 

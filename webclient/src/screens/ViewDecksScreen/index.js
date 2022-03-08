@@ -66,26 +66,27 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
     return (
         <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
 
-            <div style={{width: '100%', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '2rem'}}>
+            <div style={{width: '100%', display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginBottom: '1rem'}}>
+
+
+                <button style={{width: '200px', height: '50px', boxSizing: 'border-box', padding: '0.5rem 1rem'}} onClick={() => setAppState({...appState, mode: 'createDeck'})}>
+                        + Create New Deck
+                </button>
 
                 <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
-                    <div>Search for specific decks:</div>
-                    <input ref={searchInputRef} style={{margin: '0.5rem 0'}} type='text' placeholder={'Search words'} value={deckSearch} onChange={e => handleSearchInput(e)} />
+                    {/* <label style={{height: '30px', margin: '0'}}>Search for specific decks:</label> */}
+                    <input ref={searchInputRef} style={{height: '50px', width: '200px', boxSizing: 'border-box'}} type='text' placeholder={'(search decks)'} value={deckSearch} onChange={e => handleSearchInput(e)} />
                 </div>
 
 
-                <div onClick={() => setAppState({...appState, mode: 'createDeck'})} style={{marginBottom: '1rem', color: 'white', fontSize: '1.2rem', fontWeight: '600', boxSizing: 'border-box', padding: '0.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '150px', height: '90px', backgroundColor: '#0AF', borderRadius: '5%'}}>
-                        (+) Create New Deck
-                </div>
-
             </div>
 
-            <div style={{width: '100%', display: 'flex', gap: '0.5rem'}}>
-                <button onClick={() => setViewOnlineDecks(false)} style={{backgroundColor: viewOnlineDecks === false ? 'white' : 'gray', fontSize: '1.2rem', fontWeight: '600', alignSelf: 'flex-start', boxSizing: 'border-box', border: '1px solid black', padding: '1rem', borderRadius: '10px 10px 0 0'}}>Your Decks</button>
-                <button onClick={() => setViewOnlineDecks(true)} style={{backgroundColor: viewOnlineDecks === true ? 'white' : 'gray', fontSize: '1.2rem', fontWeight: '600', alignSelf: 'flex-start', boxSizing: 'border-box', border: '1px solid black', padding: '1rem', borderRadius: '10px 10px 0 0'}}>Search Public Decks</button>
+            <div style={{width: 'calc(70vw - 2rem)', boxSizing: 'border-box', display: 'flex', gap: '0.5rem'}}>
+                <button onClick={() => setViewOnlineDecks(false)} style={{backgroundColor: viewOnlineDecks === false ? 'white' : 'hsl(240,0%,70%)', color: viewOnlineDecks === false ? 'black' : 'hsl(240,10%,30%)', fontWeight: '600', alignSelf: 'flex-start', boxSizing: 'border-box', border: '1px solid #888', borderBottom: '1px solid #CCC', padding: '1rem', borderRadius: '10px 10px 0 0'}}>My Decks</button>
+                <button onClick={() => setViewOnlineDecks(true)} style={{backgroundColor: viewOnlineDecks === true ? 'white' : 'hsl(240,0%,70%)', color: viewOnlineDecks === true ? 'black' : 'hsl(240,10%,30%)', fontWeight: '600', alignSelf: 'flex-start', boxSizing: 'border-box', border: '1px solid #888', borderBottom: '1px solid #CCC', padding: '1rem', borderRadius: '10px 10px 0 0'}}>Public Decks</button>
             </div>
 
-            <div id='decklistcontainer' style={{display: 'flex', width: 'calc(100% - 2rem)', minHeight: '400px', gap: '1rem', flexWrap: 'wrap', padding: '1rem', backgroundColor: 'gray'}}>
+            <div id='decklistcontainer' style={{display: 'flex', boxSizing: 'border-box', justifyContent: 'center', width: 'calc(70vw - 2rem)', minHeight: '400px', gap: '1rem', flexWrap: 'wrap', padding: '1rem', backgroundColor: '#CCC'}}>
 
                 {viewOnlineDecks ? (
                     <div style={{display: 'flex', flexDirection: 'column', width: '100%', gap: '1rem', boxSizing: 'border-box'}}>
@@ -97,23 +98,29 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
                             {searchResultsArray.map((deckItem, index) => (
                                 <PublicDeckResultCard deckItem={deckItem} index={index} key={index} addPublicDeck={addPublicDeck} alreadyOwned={appState?.decks[deckItem.id] !== undefined ? true: false} />
                             ))}
+
+                            {!searchResultsArray.length &&
+                                <div>No results found.</div>
+                            }
                         </div>
 
                         {/* HERE-ish: a bunch of wide rows with extracted search data with buttons to Add to your own decks */}
                         
                     </div>
                 ) : (
-                    <>
+                    <div style={{display: 'flex', flexDirection: 'column', width: '100%', gap: '1rem', boxSizing: 'border-box'}}>
                         {Object.keys(appState?.decks).filter(deckID => (appState.decks[deckID].name.toLowerCase().includes(deckSearch.toLowerCase()))).map((deckID, index) => (
-                            <div id="deckPreview" key={index} onClick={() => viewDeck(deckID)} style={{boxSizing: 'border-box', border: appState.decks[deckID].published ? '4px solid gold' : '2px solid black', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '300px', height: '180px', backgroundColor: appState.decks[deckID].variant ? '#3DF' : '#0AF', borderRadius: '5%'}}>
-                                <div>{appState.decks[deckID].name}</div>
-                                <div style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Card Total: {appState.decks[deckID].cards.length}</div>
-                            </div>
+                            <MyDeckResultCard deckItem={appState.decks[deckID]} viewDeck={viewDeck} key={index} />
+                            // <div id="deckPreview" key={index} onClick={() => viewDeck(deckID)} style={{boxSizing: 'border-box', border: appState.decks[deckID].published ? '4px solid gold' : '2px solid black', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '300px', height: '180px', backgroundColor: appState.decks[deckID].variant ? '#3DF' : '#0AF', borderRadius: '5%'}}>
+                            //     <div>{appState.decks[deckID].name}</div>
+                            //     <div style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Card Total: {appState.decks[deckID].cards.length}</div>
+                            // </div>
+
                             // <div key={index} onClick={() => viewDeck(deckID)} style={{display: 'flex', alignItems: 'center', textAlign: 'center', justifyContent: 'center', width: '150px', height: '250px', border: '1px solid hsl(240,50%,50%)', borderRadius: '6px', boxSizing: 'border-box', padding: '1rem'}}>
                             //     {appState.decks[deckID].name}
                             // </div>
                         ))}                    
-                    </>
+                    </div>
                 )}
 
 
@@ -127,9 +134,11 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
 }
 
 const PublicDeckResultCard = ({ deckItem, index, addPublicDeck, alreadyOwned }) => {
+    // kind of awkwardly double-dipping this for both local deck objects and the returned public search deck objects...
+    // it 'works,' but it makes more sense to have a styled-component base for both and have them become separate components
     return (
-        <div style={{width: '100%', border: '1px solid green', boxSizing: 'border-box', padding: '1rem', backgroundColor: 'white'}}>
-            <h4 style={{margin: '0'}}>{deckItem.name} - {deckItem.cardTotal} cards</h4>
+        <div style={{width: '100%', border: '1px solid hsl(240,80%,40%)', borderRadius: '5px', boxSizing: 'border-box', padding: '1rem', backgroundColor: 'white'}}>
+            <h4 style={{margin: '0'}}>{deckItem.name} - {deckItem?.cardTotal || deckItem?.cards?.length} cards</h4>
             <p>{deckItem.description}</p>
             <div style={{display: 'flex', width: '100%'}}>
                 {alreadyOwned ? (
@@ -141,6 +150,21 @@ const PublicDeckResultCard = ({ deckItem, index, addPublicDeck, alreadyOwned }) 
                         <button onClick={() => addPublicDeck(deckItem.id)} style={{padding: '0.5rem 1rem', fontSize: '1.1rem', fontWeight: '600'}}>Add to My Decks</button>
                     </>
                 )}
+                
+            </div>
+        </div>
+    )
+}
+
+const MyDeckResultCard = ({ deckItem, viewDeck }) => {
+    // kind of awkwardly double-dipping this for both local deck objects and the returned public search deck objects...
+    // it 'works,' but it makes more sense to have a styled-component base for both and have them become separate components
+    return (
+        <div style={{width: '100%', border: '1px solid hsl(240,80%,40%)', borderRadius: '5px', boxSizing: 'border-box', padding: '1rem', backgroundColor: 'white'}}>
+            <h4 style={{margin: '0'}}>{deckItem.name} - {deckItem.cardTotal || deckItem.cards.length} cards</h4>
+            <p>{deckItem.description}</p>
+            <div style={{display: 'flex', width: '100%'}}>
+                <button onClick={() => viewDeck(deckItem.id)}>Edit Deck</button>
                 
             </div>
         </div>

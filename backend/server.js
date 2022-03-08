@@ -288,6 +288,7 @@ app.post('/user/login', (req, res, next) => {
 });
 
 app.post('/user/update', (req, res, next) => {
+    // the 'easiest' way to handle 'duplicate saving' is to do a check down here and ensure there's actually a difference before we save
     const { userAppData } = req.body;
     const { token } = userAppData;
     const decodedToken = jwt.verify(token, process.env.SECRET);
@@ -295,9 +296,9 @@ app.post('/user/update', (req, res, next) => {
     
     User.findOne({ id: id, username: username })
         .then(foundUser => {
-            // found ya! now to UPDATE ya!
-            // we'll test this on our first history update
             let updatedUserObject = JSON.parse(JSON.stringify(foundUser));
+            // this conditional helps us avoid unnecessary extra back-end saves, though the client is still wackadoo
+            if (JSON.stringify(userAppData) == updatedUserObject.appData) return;
             updatedUserObject.appData = userAppData;
             saveUser(updatedUserObject);
         })
@@ -374,7 +375,7 @@ app.post('/deck/publish', (req, res, next) => {
     // NOTE: we don't currently check for 'variant' to prevent 'redundant deck copy publishing,' since we already check to see if a deck's id already exists
     // we can simply add some a rejection clause ho ho ho if the deck searchResult DOES get a hit and the id doesn't match the ownerID
     // ... if the id DOES match the ownerID, we can just do an update instead, or reject and tell them to do it 'properly,' dagnabit :P
-
+    console.log(`REQUEST TO PUBLISH RECEIVED.`);
 
     let { token, decksToAdd } = req.body;
     const decodedToken = jwt.verify(token, process.env.SECRET);
@@ -581,7 +582,7 @@ app.post('/deck/fetch', (req, res, next) => {
         lastPush: allPublicDecks[deckID].lastPush
     }));
 
-    console.log(`After performing an all-decks search, we have ${deckResultsArray.length} total hits, looking like this: ${JSON.stringify(deckResultsArray)}`);
+    // console.log(`After performing an all-decks search, we have ${deckResultsArray.length} total hits, looking like this: ${JSON.stringify(deckResultsArray)}`);
 
     // final step: pass down an array of simplified deck objects to the user (id, name, description, tags) for them to interact with
     res.status(200).json({success: true, deckResultsArray: deckResultsArray});

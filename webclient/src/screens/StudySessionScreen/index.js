@@ -266,13 +266,13 @@ export default function StudySessionScreen({ goHome, appState, setAppState }) {
                 <div>{session.latestGrade ? `Current Mastery Grade: ${session.latestGrade}` : null}</div>
                 <button onClick={finishSession}>FINISH</button>
 
-                <div style={{width: '60%', border: '1px solid hsl(0, 0%, 80%)', justifyContent: 'center'}}>
+                <div style={{width: '80%', border: '1px solid hsl(0, 0%, 80%)', justifyContent: 'center'}}>
                     <div style={{display: 'flex', justifyContent: 'center', marginBottom: '2rem', alignItems: 'center', textAlign: 'center', border: '1px solid black', borderRadius: '10px', padding: '1rem'}}>{session.cards[session.cardIndex].prompt}</div>
-                    <div style={{display: 'flex', gap: '1rem', height: '30vh'}}>
-                        {/* The below probably needs to become a textarea to avoid some funky long-input issues and to match the card aesthetic */}
-                        {/* <input type='text' autoFocus={true} ref={guessRef} value={currentGuess} onChange={e => setCurrentGuess(e.target.value)} placeholder={'your explanation'} style={{display: 'flex', fontSize: 'calc(0.5rem + 0.5vw)', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '50vw', border: '1px solid black', padding: '0.5rem 1rem'}} /> */}
-                        <textarea autoFocus={true} ref={guessRef} value={currentGuess} onChange={e => setCurrentGuess(e.target.value)} placeholder={'your explanation'} style={{display: 'flex', fontFamily: 'arial', fontSize: 'calc(0.5rem + 0.5vw)', justifyContent: 'center', alignItems: 'center', textAlign: 'center', width: '50vw', border: '1px solid black', resize: 'none', padding: '1.5rem 1rem'}} />
-                        <div style={{display: 'flex', justifyContent: 'center', textAlign: 'center', width: '50vw', border: '1px solid black', fontSize: 'calc(0.5rem + 0.5vw)', padding: '1.5rem 1rem'}}>{session.showExplanation ? session.cards[session.cardIndex].explanation : '(card explanation hidden)'}</div>
+                    <div style={{display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', height: '30vh'}}>
+                        <div className='grow-wrap' style={{display: 'flex', width: 'calc(200px + 30%)'}}>
+                            <textarea autoFocus={true} ref={guessRef} value={currentGuess} onChange={e => setCurrentGuess(e.target.value)} placeholder={'your explanation'} style={{display: 'flex', width: '100%', fontFamily: 'arial', fontSize: 'calc(0.5rem + 0.5vw)', justifyContent: 'center', alignItems: 'center', textAlign: 'center', border: '1px solid black', resize: 'none', padding: '1.5rem 1rem'}} />
+                        </div>
+                        <div style={{display: 'flex', justifyContent: 'center', textAlign: 'center', width: 'calc(200px + 30%)', border: '1px solid black', fontSize: 'calc(0.5rem + 0.5vw)', padding: '1.5rem 1rem'}}>{session.showExplanation ? session.cards[session.cardIndex].explanation : '(card explanation hidden)'}</div>
                     </div>
 
                     {session.showExplanation ? (

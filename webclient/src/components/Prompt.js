@@ -58,13 +58,13 @@ export default function Prompt({ appState, setAppState }) {
     if (appState?.globalPrompt?.echo?.length > 0) {
         return (
             <div id='screenmask' style={{position: 'fixed', top: '0', left: '0', width: '100vw', height: '100%', backgroundColor: 'hsla(0,0%,10%,0.5)', zIndex: '8'}}>
-                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', position: 'fixed', top: '25vh', left: '30vw', backgroundColor: 'white', zIndex: '99', width: '40vw', height: '20vh', border: '2px solid blue'}}>
-                    <div style={{fontSize: '1.5rem'}}>{appState.globalPrompt.echo}</div>
-                    <div style={{display: 'flex', gap: '50%', justifyContent: 'center', alignItems: 'center'}}>
+                <div style={{display: 'flex', flexWrap: 'wrap', padding: '0.5rem 1rem', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', position: 'fixed', top: '25vh', boxSizing: 'border-box', left: 'calc(45vw - 100px)', backgroundColor: 'white', zIndex: '99', width: 'calc(200px + 10vw)', height: '20vh', border: '2px solid #06C', borderRadius: '5px'}}>
+                    <div style={{fontSize: 'calc(0.8rem + 0.4vw)'}}>{appState.globalPrompt.echo}</div>
+                    <div style={{display: 'flex', gap: '1rem', justifyContent: 'center', alignItems: 'center'}}>
                         {appState.globalPrompt.type === 'yn' && (
                             <>
-                                <button onClick={() => handlePromptResponse('y')} style={{padding: '0.5rem 1rem', fontSize: '1.2rem', fontWeight: '600'}}>Yup</button>
-                                <button onClick={() => handlePromptResponse('n')} style={{padding: '0.5rem 1rem', fontSize: '1.2rem', fontWeight: '600'}}>Nah</button>
+                                <button onClick={() => handlePromptResponse('y')} style={{}}>Yes</button>
+                                <button onClick={() => handlePromptResponse('n')} style={{}}>No</button>
                             </>
                         )}
 
