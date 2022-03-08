@@ -193,7 +193,6 @@ Final Checklist:
 [_] Review fixes & adjustments, address the most concerning items
 [_] Final 'walkthrough' with fresh app -- create, log out, log in, use every part of the app and make sure it works as expected
 ..
-[x] HomeScreen & base layout overhaul - merge with Profile concerns
 
 
 FIXES & ADJUSTMENTS:
@@ -221,7 +220,6 @@ FIXES & ADJUSTMENTS:
 [_] Local deletion of decks does NOT properly let the backend know... this is particularly pertinent for Variant Decks
 [_] Ensure all history.log items match 1-to-1 with any alerts the user receives, so alerts disappearing doesn't just mean "whoopsie might have missed that one"
 ..
-[x] Deck publishing is un-borked (borking user updates in the meantime, whoops)
 
 
 
