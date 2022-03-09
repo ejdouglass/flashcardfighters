@@ -8,6 +8,15 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 require('dotenv').config();
 
+// app.use((req, res, next) => {
+//     res.header("Access-Control-Allow-Origin", "*");
+//     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+//     next();
+// });
+app.use(cors({
+    origin: 'http://127.0.0.1:3456'
+}));
+
 let allPublicDecks = {};
 
 function generateRandomID(prefix) {
@@ -94,14 +103,6 @@ mongoose.connect(process.env.DB_HOST)
     .then(() => console.log(`Successfully connected to Flashcard Fighters database.`))
     .catch(err => console.log(`Error connecting to Flashcard Fighters database: ${err}`));
 
-// app.use((req, res, next) => {
-//     res.header("Access-Control-Allow-Origin", "*");
-//     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//     next();
-// });
-app.use(cors({
-    origin: 'http://localhost:3456'
-}));
 
 app.use(express.json());
 app.use(express.urlencoded({extended: false}));
@@ -372,6 +373,7 @@ app.post('/user/delete', (req, res, next) => {
 
 app.post('/server/test', (req, res, next) => {
     console.log(`Most basic test. Just logging that we received the request at this point.`);
+    res.json({echo: `ECHO. ECHO. Echo echo echo~`});
 });
 
 
