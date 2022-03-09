@@ -14,7 +14,7 @@ require('dotenv').config();
 //     next();
 // });
 app.use(cors({
-    origin: 'http://127.0.0.1:3456'
+    origin: 'http://localhost:3456'
 }));
 
 let allPublicDecks = {};
