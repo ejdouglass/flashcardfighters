@@ -90,17 +90,8 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     function updateDeck() {
         axios.post('/deck/update', { token: appState.token, decksToUpdate: [{...newDeck}] })
             .then(res => {
-                let newLogItem = {
-                    echo: `You re-published ${newDeck.name} with your current version.`,
-                    timestamp: new Date(),
-                    event: 'deck_update',
-                    subject: newDeck.id
-                }                
-                // as long as appState is set first, this mildly abhorrent approach works a-ok!
-                setAppState({...appState, alertString: `The online version of this deck has been successfully updated!`, history: {
-                    log: [...appState.history.log, newLogItem],
-                    actions: {...appState.history.actions, decksUpdated: appState.history.actions?.decksUpdated ? appState.history.actions.decksUpdated + 1 : 1}
-                }});
+                // have to make sure lastPush 'saves' properly on the backend for the user, as well, hrm
+                setAppState(res.data.newAppState);
                 return setNewDeck({...newDeck, lastPush: res.data.timestamp});
             })
             .catch(err => alert(`ERROR UPDATING DECK: ${err}`));

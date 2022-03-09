@@ -123,20 +123,20 @@ export default function HomeScreen({ appState, setAppState }) {
         setActivityLogPage(0);
     }, []);
 
-    function serverTest() {
-        axios.post('/server/test', {})
-            .then(res => {
-                console.log(`Server response: `, res);
-            })
-            .catch(err => console.log(`Server response ERROR: `, err));
-    }
+    // function serverTest() {
+    //     axios.post('/server/test', {})
+    //         .then(res => {
+    //             console.log(`Server response: `, res);
+    //         })
+    //         .catch(err => console.log(`Server response ERROR: `, err));
+    // }
 
 
     return (
         <div id="appScreen" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'}}>
             <div style={{display: 'flex', width: '100%', justifyContent: 'flex-end'}}>
                 <button style={{}} onClick={logout}>Log Out</button>
-                <button onClick={serverTest}>Server Boop</button>
+                {/* <button onClick={serverTest}>Server Boop</button> */}
             </div>
             
             <div style={{display: 'flex'}}>

@@ -182,9 +182,21 @@ Final Checklist:
   [_] Denote favorite sessions as being favorite sessions rather than funny mystery buttons :P
   [x] cardfix - allow card styling to scale to contents better, far less padding, figure out how to let overflow stretch card
   [x] Flesh out the Alert and Prompt to be less aggressively hideous
-  [_] Helpful alerts/prompts where applicable (for example, failure to log in is currently a butt-ugly alert :P)
+  [_] Helpful alerts/prompts where applicable (for example, failure to log in is currently a butt-ugly ALERT :P)
   [_] Highlight HOME, DECKS, and STUDY when they're currently in use
   [_] Add notations and/or visual guides to which decks are PUBLISHED, ONLINE-SOURCED, etc.
+  [_] Add placeholder history/activity for when there is none
+  [_] Logging in is slower now -- add a visual "attempting to log in..." note when that process begins
+
+[_] Re-introduce user/update functionality - hook it into known substantive app engagement points is ideal (though obviously check for basic username/etc.)
+  NOTE: any of the below can be X'd if the backend already does a save and pushes new user data
+  [_] Substantial deck change (each new card added; little card fixes are trickier, however)
+  [x] New study session created
+  [_] Study session completed ... hm, isn't currently properly saving the log item?
+  [_] Deck published
+  [_] Deck unpublished
+  [_] Deck deleted (found in Prompt)
+  [_] Logout
 
 
 [_] Basic guiding
@@ -196,14 +208,6 @@ Final Checklist:
 
 
 FIXES & ADJUSTMENTS:
-[_] Re-introduce user/update functionality - hook it into known substantive app engagement points is ideal (though obviously check for basic username/etc.)
-  NOTE: any of the below can be X'd if the backend already does a save and pushes new user data
-  [_] Substantial deck change (each new card added; little card fixes are trickier, however)
-  [x] New study session created
-  [_] Study session completed
-  [_] Deck published
-  [_] Deck unpublished
-  [_] Logout
 [_] Logging out appears to totally wipe all extant sessions out of existence. Same with history log. Probably due to lack of user/update calls... :P
   - do a quick check of what current actions (such as publishing) properly save the user on the backend; then figure out a good way to user/update, test for breakage
 [_] Starting a new study session causes a very brief but visible screen flicker/hiccup/render cascade ("Loading session...")

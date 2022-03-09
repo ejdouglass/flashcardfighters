@@ -205,12 +205,18 @@ export default function StudySessionScreen({ goHome, appState, setAppState }) {
         timestamp: new Date(),
         event: 'session_studied',
         subject: 'studyness'
-        }      
-       setAppState({...appState, history: {
-           log: [...appState.history.log, newLogItem],
-           actions: {...appState.history.actions, sessionsStudied: appState.history.actions.sessionsStudied + 1}
-       }})
-       return setSessionFinished(true);
+        }
+        let newAppState = ({...appState, history: {
+            log: [...appState.history.log, newLogItem],
+            actions: {...appState.history.actions, sessionsCreated: appState.history.actions.sessionsStudied + 1}
+        }});
+        axios.post('/user/update', { userAppData: newAppState })
+        .then(() => {
+        //   console.log(`User update pushed to back-end.`);
+        })
+        .catch(err => console.log(`Error updating user: `, err));           
+        setAppState(newAppState);
+        return setSessionFinished(true);
     }
 
     useEffect(() => {

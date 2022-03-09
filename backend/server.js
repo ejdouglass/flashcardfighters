@@ -302,8 +302,10 @@ app.post('/user/update', (req, res, next) => {
     User.findOne({ id: id, username: username })
         .then(foundUser => {
             let updatedUserObject = JSON.parse(JSON.stringify(foundUser));
+            console.log(`Attempting to save an updated user.`);
             // this conditional helps us avoid unnecessary extra back-end saves, though the client is still wackadoo
             if (JSON.stringify(userAppData) == updatedUserObject.appData) return;
+            console.log(`Not a duplicate entry, looks like there's 'new stuff' to save.`);
             updatedUserObject.appData = userAppData;
             saveUser(updatedUserObject);
         })
@@ -371,10 +373,10 @@ app.post('/user/delete', (req, res, next) => {
         .catch(err => console.log(`Error deleting a user: ${err}`));
 });
 
-app.post('/server/test', (req, res, next) => {
-    console.log(`Most basic test. Just logging that we received the request at this point.`);
-    res.json({echo: `ECHO. ECHO. Echo echo echo~`});
-});
+// app.post('/server/test', (req, res, next) => {
+//     console.log(`Most basic test. Just logging that we received the request at this point.`);
+//     res.json({echo: `ECHO. ECHO. Echo echo echo~`});
+// });
 
 
 app.post('/deck/publish', (req, res, next) => {
@@ -496,8 +498,8 @@ app.post('/deck/publish', (req, res, next) => {
 
 app.post('/deck/update', (req, res, next) => {
     // THIS: overwrite the 'old' version of the deck with the new proposed version, via the owner's intention
-    // check ownerID of the deck in question
-    // we'll assume decksToUpdate is an array for later implementation, but currently it'll be a single deck (array length 1)
+    // though we have some support for multiple deck updates, the newLogItem concept below does NOT currently accurately reflect this scenario
+    // same for decksUpdated near the bottom
     let { token, decksToUpdate } = req.body;
     const decodedToken = jwt.verify(token, process.env.SECRET);
     const { id } = decodedToken;
@@ -508,18 +510,31 @@ app.post('/deck/update', (req, res, next) => {
             userObj = JSON.parse(JSON.stringify(foundUser));
             userObj.appData = JSON.parse(userObj.appData);
 
+            let newLogItem;
             decksToUpdate.forEach(deckObj => {
                 allPublicDecks[deckObj.id] = {...deckObj};
                 allPublicDecks[deckObj.id].lastPush = newPushTimestamp;
                 userObj.appData.decks[deckObj.id] = {...allPublicDecks[deckObj.id]};
+                newLogItem = {
+                    echo: `You re-published ${deckObj.name} with your current version.`,
+                    timestamp: newPushTimestamp,
+                    event: 'deck_update',
+                    subject: deckObj.id
+                };  
                 saveDeck(allPublicDecks[deckObj.id]);
-            }); 
+            });
+
+    
+            let newAppState = ({...userObj.appData, alertString: `The online version of this deck has been successfully updated!`, history: {
+                log: [...userObj.appData.history.log, newLogItem],
+                actions: {...userObj.appData.history.actions, decksUpdated: userObj.appData.history.actions.decksUpdated + 1}
+            }});
             
             saveUser(userObj);
         })
         .catch(err => console.log(`Error loading user from DB while updating a deck; error message: ${err}`));
 
-    res.status(200).json({success: true, timestamp: newPushTimestamp});
+    res.status(200).json({success: true, timestamp: newPushTimestamp, newAppState: newAppState});
 
 });
 
