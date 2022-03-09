@@ -366,6 +366,10 @@ app.post('/user/delete', (req, res, next) => {
         .catch(err => console.log(`Error deleting a user: ${err}`));
 });
 
+app.post('/server/test', (req, res, next) => {
+    console.log(`Most basic test. Just logging that we received the request at this point.`);
+});
+
 
 app.post('/deck/publish', (req, res, next) => {
     // a user 'publishes' decks to the backend

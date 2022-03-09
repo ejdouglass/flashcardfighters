@@ -5,7 +5,8 @@ import App from './App';
 import axios from 'axios';
 import reportWebVitals from './reportWebVitals';
 
-axios.defaults.baseURL = 'http://localhost:9092';
+// axios.defaults.baseURL = 'http://localhost:9092';
+axios.defaults.baseURL = 'https://cardfighter.herokuapp.com/';
 axios.defaults.headers.post['Content-Type'] = 'application/json';
 
 ReactDOM.render(
