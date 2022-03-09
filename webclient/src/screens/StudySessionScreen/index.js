@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 
 export default function StudySessionScreen({ goHome, appState, setAppState }) {
     /*
@@ -211,8 +212,9 @@ export default function StudySessionScreen({ goHome, appState, setAppState }) {
             actions: {...appState.history.actions, sessionsCreated: appState.history.actions.sessionsStudied + 1}
         }});
         axios.post('/user/update', { userAppData: newAppState })
-        .then(() => {
-        //   console.log(`User update pushed to back-end.`);
+        .then(res => {
+            if (res.data.success) console.log(`Word from the server is that the user was successfully updated!`)
+            else console.log(`Client heard back from the server, but apparently did not achieve success in user updating.`);
         })
         .catch(err => console.log(`Error updating user: `, err));           
         setAppState(newAppState);

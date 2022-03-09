@@ -308,8 +308,12 @@ app.post('/user/update', (req, res, next) => {
             console.log(`Not a duplicate entry, looks like there's 'new stuff' to save.`);
             updatedUserObject.appData = userAppData;
             saveUser(updatedUserObject);
+            res.status(200).json({success: true});
         })
-        .catch(err => console.log(`Error updating user: ${err}`));
+        .catch(err => {
+            console.log(`Error updating user: ${err}`);
+            res.status(503).json({success: false});
+        });
     // !MHR
 });
 
