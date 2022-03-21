@@ -177,42 +177,66 @@ CURRENTLY: building out backend
 Final Checklist:
 [_] Prettify (alerts, prompts, styling, etc.), including responsiveness considerations across mobile formats & final folio page layout concerns
   [x] basic responsiveness 1: single-column for narrow views, can have inner divs of certain width, use flex-wrap where applicable
-  [x] basic responsiveness 2: fontsizing @ rems
+  [x] basic responsiveness 2: fontsizing @ calc rems + vw
   [x] history/activity homepage container: add timestamp parsing, 'older' 'newer' buttons (with 'Newest' displayed when at cap)
-  [_] Denote favorite sessions as being favorite sessions rather than funny mystery buttons :P
+  [x] Denote favorite sessions as being favorite sessions rather than funny mystery buttons :P
   [x] cardfix - allow card styling to scale to contents better, far less padding, figure out how to let overflow stretch card
   [x] Flesh out the Alert and Prompt to be less aggressively hideous
-  [_] Helpful alerts/prompts where applicable (for example, failure to log in is currently a butt-ugly ALERT :P)
-  [_] Highlight HOME, DECKS, and STUDY when they're currently in use
-  [_] Add notations and/or visual guides to which decks are PUBLISHED, ONLINE-SOURCED, etc.
-  [_] Add placeholder history/activity for when there is none
-  [_] Logging in is slower now -- add a visual "attempting to log in..." note when that process begins
+  [x] Failure to log in alert through alertString (may be others; adjust as found)
+  [x] Highlight HOME, DECKS, and STUDY when they're currently in use
+  [x] Add notations and/or visual guides to which decks are PUBLISHED (published), ONLINE-SOURCED (variant), etc.
+  [x] Add placeholder history/activity for when there is none
+  [x] Logging in is slower now -- add a visual "attempting to log in..." note when that process begins
+  [x] Card creation cleanup (explanation)
+  [_] Final responsiveness concerns (mostly keeping buttons where they're accessible on phone screens, ESPECIALLY for creating cards)
+    -- also for sessions (box sizing is a little weird)
+  [_] Final (grayscale) visual hierarchy adjustments
 
-[_] Re-introduce user/update functionality - hook it into known substantive app engagement points is ideal (though obviously check for basic username/etc.)
+[_] Re-introduce user/update functionality (essentially, make sure the user is being properly updated both client-side and server-side when a substantial change occurs)
   NOTE: any of the below can be X'd if the backend already does a save and pushes new user data
   [_] Substantial deck change (each new card added; little card fixes are trickier, however)
   [x] New study session created
-  [_] Study session completed ... hm, isn't currently properly saving the log item?
-  [_] Deck published
-  [_] Deck unpublished
+  [x] Study session completed
+  [x] Deck published
+  [x] Deck update
+  [x] Deck unpublished
   [_] Deck deleted (found in Prompt)
-  [_] Logout
+  [_] Logout (sort of a handy catch-all, not as critical if all others are correctly applied)
 
 
-[_] Basic guiding
+[_] Basic (new) user guidance
   [_] "?" button in corner on all engagement pages, front-page "How To Cardfight" (new prompt type: informational or info)
   [_] Finish WELCOME MESSAGE (basic for now)
-[_] Review fixes & adjustments, address the most concerning items
-[_] Final 'walkthrough' with fresh app -- create, log out, log in, use every part of the app and make sure it works as expected
+
+
+[_] prioritized fixes & adjustments skim + address
+
+
+[_] Publish both webclient and backend to Heroku
+
+
+[_] Final 'walkthrough' with fresh app online -- create, log out, log in, use every part of the app and make sure it works as expected
 ..
 
 
 FIXES & ADJUSTMENTS:
-[_] Logging out appears to totally wipe all extant sessions out of existence. Same with history log. Probably due to lack of user/update calls... :P
-  - do a quick check of what current actions (such as publishing) properly save the user on the backend; then figure out a good way to user/update, test for breakage
+[_] Ongoing self-grade seems... completely wrong? :P (at least for a single-card deck)
+[_] "Offline Mode"... just firing up the app, what happens when a logged-in user temporarily (for any reason) has no server access?
+  -- I think a big part of it will be just making sure auto-save situations do NOT alert the user if there's an error (aside maybe from a little "X" somewhere to indicate unsync)
+[_] If a deck is displayed in own search results, does NOT give proper outline for published decks
+[_] New account publishing a deck does NOT update history.log? In fact, creating a new deck didn't do anything, either. Hm.
+[_] Whoops: "Little History" such as "creating a new deck" is NUKED INTO OBLIVION when then going to publish that deck
+  -- a new user just doodling along with their own little log does NOT pass their current "minor action" item such as deck creation to the backend before
+    it gets replaced when a deck is, say, published
+[_] Getting "Last Publish: null" sometimes/often on booping into previously published decks
+[_] Autoscroll can be a little annoying on the activity log, particularly in narrower windows (scrolls the menu bar out of reach automatically)
+[_] "History log collapsing" means that studying the same session twice in a row, no matter how long or how long in between, will "collapse" into the latest.
+[x] Logging out appears to totally wipe all extant sessions out of existence. Same with history log. Probably due to lack of user/update calls... :P
+[_] Kicking to DECKS screen when publishing seems a little silly
 [_] Starting a new study session causes a very brief but visible screen flicker/hiccup/render cascade ("Loading session...")
 [_] Consider and test the case where user starts making cards BEFORE naming the deck, etc.
 [_] Public searching is a little wonky? Test the public deck searching behavior.
+  -- Also, it's slow now that it's on a remote server; for now, just letting the user know a new search is occuring might be best ("Searching decks...")
 [_] Token is used quite a bit on the backend, but currently there is no proper token refresh mechanism
 [_] Consider a mechanism where reshuffling doesn't risk showing the same card twice (finish a set with one card, having it reshuffle to index 0 for next round)
 [_] Better handling of attempting to Publish someone else's deck... or just making the option vanish (variant: true?)
@@ -228,8 +252,12 @@ FIXES & ADJUSTMENTS:
 
 
 PENDING RELEASE CONCEPTS:
+[_] Better handling of deck editing/card creation/card editing for history log purposes
+  -- rather than 'on the fly editing' we can change it to 'confirm changes' mixed with if user tries to nav away with unattended changes we Prompt 'em
+[_] Rejigger deck description to not be a big ol' chunk of real estate, particularly in deck editing, and double particularly in mobile sizes
+[_] Default 'ALL MY CARDS' study session?
 [_] Study session deletion. :P
-[_] basic palette implementation
+[_] basic palette implementation, including cardstocks and such
 [_] Public sharing of sessions (slightly trickier as it would require more deck-checking)
 [_] App periodically checking for cloned deck updates, showing a "!" or somesuch when applicable
 [_] Animations/transitions (and likely simple implementation of styled-components file alongside that)

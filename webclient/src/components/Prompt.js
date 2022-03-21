@@ -22,10 +22,20 @@ export default function Prompt({ appState, setAppState }) {
                 delete appStateCopy.decks[appState.globalPrompt.target];
                 appStateCopy.history.actions.decksDeleted += 1;
 
-                return setAppState({...appStateCopy, mode: 'viewDecks', globalPrompt: undefined});
+                axios.post('/user/update', { userAppData: appState })
+                    .then(res => {
+                        if (res.data.success) {
+                            console.log(`Backend update of deck deletion was successful.`);
+                            return setAppState({...appStateCopy, mode: 'viewDecks', globalPrompt: undefined});
+                        }
+                    })
+                    .catch(err => setAppState({...appState, alertString: `Error deleting deck: ${err}`}));
+
+                break;
 
                 // return setAppState({...appState, decks: {...allDecksCopy}, mode: 'viewDecks', globalPrompt: undefined});
             }
+            
 
             case 'deleteProfile': {
                 // axios time! we're expected to pass the token back for this
@@ -48,6 +58,7 @@ export default function Prompt({ appState, setAppState }) {
                         });                        
                     })
                     .catch(err => alert(`Deletion attempt received an error: ${err}`));
+                break;
             }
 
             default: return;

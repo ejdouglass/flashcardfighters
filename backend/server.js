@@ -391,7 +391,7 @@ app.post('/deck/publish', (req, res, next) => {
     // NOTE: we don't currently check for 'variant' to prevent 'redundant deck copy publishing,' since we already check to see if a deck's id already exists
     // we can simply add some a rejection clause ho ho ho if the deck searchResult DOES get a hit and the id doesn't match the ownerID
     // ... if the id DOES match the ownerID, we can just do an update instead, or reject and tell them to do it 'properly,' dagnabit :P
-    console.log(`REQUEST TO PUBLISH RECEIVED.`);
+    // console.log(`REQUEST TO PUBLISH RECEIVED.`);
 
     let { token, decksToAdd } = req.body;
     const decodedToken = jwt.verify(token, process.env.SECRET);
@@ -399,18 +399,15 @@ app.post('/deck/publish', (req, res, next) => {
     let successfulDeckUploadCount = 0;
     let feedbackMessage = ``;
 
-    // res.status(200).json({alertString: 'Received your request.'});
-    // return console.log(`Request! Add a Public Deck! Received token: ${JSON.stringify(decodedToken)} ... which belongs to id of ${id} ... and decksToAdd: ${JSON.stringify(decksToAdd)}. That look right?`);
+    if (decksToAdd[0].cards.length === 0) res.status(503).json({success: false, alertString: `Nobody is served by having a totally empty deck in the online repository. You goof.`});
 
-    // ADD HERE: a 'catch' in case we have problematic token and/or decksToAdd array
+    // HERE: add a 'catch' in case we have problematic token and/or decksToAdd array
 
 
-    // idle thought: should we 'trustingly' add 'shared: true' to decks on the client side under successful axios posting?
+    // idle thought: should we 'trustingly' add 'published: true' to decks on the client side under successful axios posting?
     // ... actually, that might be fine; my other thought is to retrieve the User and update their decks and slap the new appData down, but that seems like extra steps
     // there ARE some conditions, such as user uploading a mix of shareable and un-shareable decks, that could cause some issues with this approach
     // we can avoid some/most of those by doing a client-side check and NOT adding 'shared: true' to 'variant: true' decks, and the code below will ignore copy decks
-
-    // ideally, we have an array of decksToAdd, even if the array is length 1, for the forEach below
 
     // HERE: we'll fetch the requesting User, and then when all's done, the wrapUp can save them and then we pass down their new 'self'
     // ensure we're on the correct 'mode' so it doesn't feel weird on the client side
@@ -421,6 +418,7 @@ app.post('/deck/publish', (req, res, next) => {
     User.findOne({ id: id })
         .then(userSearchResult => {
             if (userSearchResult === null) {
+                res.status(406).json({success: false, alertString: `Error: The User belonging to that deck wasn't found!`});
                 return console.log(`No such user found. 406 error reported.`);
             } else {
                 // console.log(`fetchUserInfo fxn called for ID ${userID} and found this user: ${JSON.stringify(userSearchResult)}`);
@@ -453,10 +451,9 @@ app.post('/deck/publish', (req, res, next) => {
                                         // ok, so the above reads as true, that's a good start
                                         publishingUserCopy.appData.alertString = `${successfulDeckUploadCount} deck${successfulDeckUploadCount > 1 ? 's' : ''} added to the Public Online Repository!`
                                         allPublicDecks[freshDeck.id] = freshDeck;
-                                        wrapItUp(index, decksToAdd.length, publishingUserCopy);
+                                        wrapItUp(index, decksToAdd.length, publishingUserCopy, freshDeck.name);
                                     })
                                     .catch(err => {
-                                        // we get this error on the REGULAR. HRM.
                                         res.json({success: false, alertString: `Something went wrong attempting to save the deck to the public repository: ${JSON.stringify(err)}`});
                                     })
                             } else {
@@ -485,14 +482,25 @@ app.post('/deck/publish', (req, res, next) => {
 
 
 
-    function wrapItUp(index, length, user) {
+    function wrapItUp(index, length, user, deckName) {
         if (index === length - 1) {
             // Should only fire this success header and response when all the async shenanigans are good to go
             // HERE: final userSave, then pass down to client for updating
             user.appData.mode = 'viewDecks';
+            // I'm not 100% sure this is necessary anymore? I believe the username is already generally attached down there. Will leave for the time being, review later.
             user.appData.username = user.username;
-            // console.log(`Let's just look at the decks as we pass back the new overwriting userData: ${JSON.stringify(user.appData.decks)}`)
-            // turns out the userData object is attached 
+            let newLogItem = {
+                echo: `You published ${deckName || `your deck`} to the Great Online Repository of Good and Lovely and Also Helpful Decks.`,
+                timestamp: new Date(),
+                event: 'deck_publish',
+                subject: deckName
+            };
+            user.appData = {...user.appData, history: {
+                ...user.appData.history,
+                log: [...user.appData.history.log, newLogItem],
+                actions: {...user.appData.history.actions, decksPublished: user.appData.history.actions.decksPublished + 1}
+            }};
+
             res.status(200).json({success: true, userData: user.appData, alertString: user.appData.alertString});
             return saveUser(user);
         }        
@@ -546,11 +554,12 @@ app.post('/deck/unpublish', (req, res, next) => {
     const { token, deckID } = req.body;
     const decodedToken = jwt.verify(token, process.env.SECRET);
     const { id: userID } = decodedToken;
+    let deckName = allPublicDecks[deckID]?.name || 'your deck';
 
     // basically, we have to remove this deck from allPublicDecks, from the DB, and then set the user's data of this deck's PUBLISHED to false all around
     Deck.findOneAndDelete({ id: deckID })
         .then(result => {
-            console.log(`Here's the result that passes in from deletion of a deck, for reference: ${result}`);
+            // console.log(`Here's the result that passes in from removal of a deck, for reference: ${result}`);
             delete allPublicDecks[deckID];
 
             User.findOne({ id: userID })
@@ -560,8 +569,21 @@ app.post('/deck/unpublish', (req, res, next) => {
                     userCopy.appData.decks[deckID].published = false;
                     userCopy.appData.decks[deckID].lastPush = undefined;
 
-                    saveUser(userCopy);
-                    res.status(200).json({success: true});
+                    let newLogItem = {
+                        echo: `You unpublished ${deckName}, removing it from the Great Online Repository.`,
+                        timestamp: new Date(),
+                        event: 'deck_unpublish',
+                        subject: deckID
+                    }
+
+                    userCopy.appData.history.log = [...userCopy.appData.history.log, newLogItem];
+                    userCopy.appData.history.actions = {...userCopy.appData.history.actions, decksUnpublished: userCopy.appData.history.actions.decksUnpublished + 1};
+                    userCopy.appData.alertString = `You have successfully unpublished the deck called ${deckName}. It is no longer shared online.`;
+
+                    console.log(`Unpublish CHECK! Type of userCopy.appData is ${typeof userCopy.appData}. Contents include: `, userCopy.appData);
+                    
+                    res.status(200).json({success: true, userData: userCopy.appData});
+                    return saveUser(userCopy);
                 })
                 .catch(err => console.log(`Error found during deck unpublishing, user-fetch portion: ${err}`));
         })

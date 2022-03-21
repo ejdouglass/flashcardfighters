@@ -30,6 +30,15 @@ code {
   font-weight: 600;
 }
 
+#blinkline {
+  animation: blinkin 1s steps(2, jump-none) 1s infinite;
+}
+
+@keyframes blinkin {
+  from {opacity: 0;}
+  to {opacity: 1;}
+}
+
 input {
   padding: 0.5rem 1rem;
   font-size: 1rem;

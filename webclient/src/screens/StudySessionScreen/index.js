@@ -267,37 +267,46 @@ export default function StudySessionScreen({ goHome, appState, setAppState }) {
     if (session.cards.length && !sessionFinished) {
         return (
             <div style={{display: 'flex', flexDirection: 'column', width: '100%', alignItems: 'center'}}>
-                <h1>Study Session: {appState.sessions[appState.currentModeTargetID].nickname}</h1>
-                <div>Study Time: {timerVisible ? parseSecondsToHMS(timer) : `(Hidden)`}</div>
-                <button onClick={() => setTimerVisible(!timerVisible)}>Toggle Timer Visibility</button>
-                <div>Session Set #{session.setsDone + 1} - {session.cardsDone} total cards conquered this session</div>
-                <div>{session.latestGrade ? `Current Mastery Grade: ${session.latestGrade}` : null}</div>
-                <button onClick={finishSession}>FINISH</button>
+                <div style={{fontWeight: '600', fontSize: 'calc(0.9rem + 0.4vw)', marginBottom: '0.5rem'}}>Studying - {appState.sessions[appState.currentModeTargetID].nickname}</div>
+                
+
+                
+
+                
+                {/* <div>{session.latestGrade ? `Current Mastery Grade: ${session.latestGrade}` : null}</div> */}
+                
 
                 <div style={{width: '80%', border: '1px solid hsl(0, 0%, 80%)', justifyContent: 'center'}}>
                     <div style={{display: 'flex', justifyContent: 'center', marginBottom: '2rem', alignItems: 'center', textAlign: 'center', border: '1px solid black', borderRadius: '10px', padding: '1rem'}}>{session.cards[session.cardIndex].prompt}</div>
                     <div style={{display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', height: '30vh'}}>
-                        <div className='grow-wrap' style={{display: 'flex', width: 'calc(200px + 30%)'}}>
-                            <textarea autoFocus={true} ref={guessRef} value={currentGuess} onChange={e => setCurrentGuess(e.target.value)} placeholder={'your explanation'} style={{display: 'flex', width: '100%', fontFamily: 'arial', fontSize: 'calc(0.5rem + 0.5vw)', justifyContent: 'center', alignItems: 'center', textAlign: 'center', border: '1px solid black', resize: 'none', padding: '1.5rem 1rem'}} />
+                        <div style={{display: 'flex', width: 'calc(200px + 30%)'}}>
+                            <textarea autoFocus={true} ref={guessRef} value={currentGuess} onChange={e => setCurrentGuess(e.target.value)} placeholder={'your explanation'} style={{display: 'flex', width: '100%', fontFamily: 'arial', fontSize: 'calc(0.8rem + 0.3vw)', justifyContent: 'center', alignItems: 'center', textAlign: 'center', border: '1px solid black', resize: 'none', padding: '1.5rem 1rem'}} />
                         </div>
-                        <div style={{display: 'flex', justifyContent: 'center', textAlign: 'center', width: 'calc(200px + 30%)', border: '1px solid black', fontSize: 'calc(0.5rem + 0.5vw)', padding: '1.5rem 1rem'}}>{session.showExplanation ? session.cards[session.cardIndex].explanation : '(card explanation hidden)'}</div>
+                        <div style={{display: 'flex', justifyContent: 'center', textAlign: 'center', width: 'calc(200px + 30%)', border: '1px solid black', fontSize: 'calc(0.8rem + 0.3vw)', padding: '1.5rem 1rem'}}>{session.showExplanation ? session.cards[session.cardIndex].explanation : '(card explanation hidden)'}</div>
                     </div>
 
                     {session.showExplanation ? (
-                        <div style={{width: '100%', display: 'flex', justifyContent: 'center', gap: '2rem'}}>
+                        <div style={{width: '100%', display: 'flex', justifyContent: 'center', gap: '1rem'}}>
                             <button onClick={() => advanceSession(3)}>NAILED it</button>
                             <button onClick={() => advanceSession(2)}>KINDA got it</button>
                             <button onClick={() => advanceSession(1)}>Woof, that's rough</button>
                         </div>
                     ) : (
-                        <div style={{width: '100%', display: 'flex', justifyContent: 'center', gap: '2rem'}}>
+                        <div style={{width: '100%', display: 'flex', justifyContent: 'center'}}>
                             <button onClick={advanceSession}>{currentGuess.length ? `GUESS` : `SKIP!`}</button>
                         </div>
                     )}
+
+                    
                 
                 </div>
 
-                
+                <div style={{width: '100%', display: 'flex', gap: '0.75rem', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem'}}>
+                    <button onClick={() => setTimerVisible(!timerVisible)}>{timerVisible ? parseSecondsToHMS(timer) : `(Show Study Time)`}</button>
+                </div>
+                <div>Session Set #{session.setsDone + 1}</div>
+                <div>{session.cardsDone} total cards conquered this session</div>
+                <button onClick={finishSession}>FINISH</button>
                 
             </div>
         )

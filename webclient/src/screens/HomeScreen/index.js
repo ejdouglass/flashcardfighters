@@ -6,20 +6,24 @@ export default function HomeScreen({ appState, setAppState }) {
         username: '',
         password: ''
     });
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [derivedActivityLog, setDerivedActivityLog] = useState([]);
     const [activityLogPage, setActivityLogPage] = useState(undefined);
     const activityLogRef = useRef(null);
 
 
     function logIn(e) {
+        // will do a straight 'set' and if that fails just do a bool check and re-call this fxn :P
+        setIsLoggingIn(true);
         e.preventDefault();
-        if (userCredentials.username.length < 4 || userCredentials.password.length < 1) return alert(`WEE OO gotta enter your username and password, champ!`);
+        if (userCredentials.username.length < 4 || userCredentials.password.length < 1) return setAppState({...appState, alertString: `Please enter your username and password to log in!`});
         axios.post('/user/login', { userCredentials: userCredentials })
             .then(res => {
+                setIsLoggingIn(false);
                 setAppState(res.data.appData);
                 return setActivityLogPage(0);
             })
-            .catch(err => alert(`ERROR LOGGING IN: ${err}`));
+            .catch(err => setAppState({...appState, alertString: `Error encountered whilst logging in: ${err}`}));
     }
 
     function createNewProfile() {
@@ -135,12 +139,17 @@ export default function HomeScreen({ appState, setAppState }) {
     return (
         <div id="appScreen" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem'}}>
             <div style={{display: 'flex', width: '100%', justifyContent: 'flex-end'}}>
-                <button style={{}} onClick={logout}>Log Out</button>
+                <button style={{display: appState?.username ? 'flex' : 'none'}} onClick={logout}>Log Out</button>
                 {/* <button onClick={serverTest}>Server Boop</button> */}
             </div>
             
             <div style={{display: 'flex'}}>
-                <div style={{fontSize: 'calc(1rem + 0.3vw)', fontWeight: '600', margin: '0.5rem', textAlign: 'center'}}>{appState?.username && `${appState?.username}'s`} Cardfighter</div>
+                {isLoggingIn ? (
+                    <div style={{fontSize: 'calc(1rem + 0.3vw)', fontWeight: '600', margin: '0.5rem', textAlign: 'center'}}>Now Logging In...</div>
+                ) : (
+                    <div style={{fontSize: 'calc(1rem + 0.3vw)', fontWeight: '600', margin: '0.5rem', textAlign: 'center'}}>Cardfighter {appState?.username && `${appState?.username}`} </div>
+                )}
+                
             </div>
             
 
@@ -159,28 +168,37 @@ export default function HomeScreen({ appState, setAppState }) {
                 </form>
             )}
 
-            {Object.keys(appState.sessions).filter(sessionID => appState.sessions[sessionID]?.favorite).length > 0 &&
-                <div>Favorite Sessions</div>
-            }
-            <div style={{display: 'flex', justifyContent: 'center', width: '100%', gap: '1rem'}}>
-                {Object.keys(appState.sessions).filter(sessionID => appState.sessions[sessionID]?.favorite).map((sessionID, index) => (
-                    <button key={index} onClick={() => setAppState({...appState, mode: 'studySession', currentModeTargetID: sessionID})}>{appState.sessions[sessionID].nickname}</button>
-                ))}
+            <div style={{display: Object.keys(appState.sessions).filter(sessionID => appState.sessions[sessionID]?.favorite).length > 0 ? 'flex' : 'none', boxSizing: 'border-box', padding: '1rem', border: '1px solid #CCC', borderRadius: '5px', flexWrap: 'wrap'}}>
+                
+                <div style={{width: '100%', position: 'relative', bottom: '0.5rem', display: 'flex', textAlign: 'center', justifyContent: 'center'}}>Favorite Sessions</div>
+                
+                <div style={{display: 'flex', justifyContent: 'center', width: '100%', gap: '1rem'}}>
+                    {Object.keys(appState.sessions).filter(sessionID => appState.sessions[sessionID]?.favorite).map((sessionID, index) => (
+                        <button key={index} onClick={() => setAppState({...appState, mode: 'studySession', currentModeTargetID: sessionID})}>{appState.sessions[sessionID].nickname}</button>
+                    ))}
+                </div>
+
             </div>
+
 
             <div id="tuts_and_history" style={{display: 'flex', flexDirection: 'column', boxSizing: 'border-box', alignItems: 'center', width: '100%', justifyContent: 'center', gap: '5%', flexWrap: 'wrap'}}>
 
                 <div id="tut" style={{display: 'flex', paddingTop: '1rem', lineHeight: '1.5', width: '100%', minWidth: '250px', justifyContent: 'center', textAlign: 'center'}}>
-                    THE WELCOME & BASIC TUTORIAL SECTION
+                    YOUR CARDFIGHTING HISTORY:
                 </div>
 
-                <div style={{padding: '1rem', display: derivedActivityLog.length ? 'flex' : 'none', width: '40%', minWidth: '250px', height: '50vh', overflow: 'scroll', boxSizing: 'border-box', flexDirection: 'column', border: '1px solid #DDD', borderRadius: '5px'}}>
+                <div style={{padding: '1rem', display: 'flex', width: '40%', minWidth: '250px', height: '50vh', overflow: 'scroll', boxSizing: 'border-box', flexDirection: 'column', border: '1px solid #DDD', borderRadius: '5px'}}>
                     {derivedActivityLog.map((historyItem, index) => (
                         <div key={index}  style={{display: 'flex', flexWrap: 'wrap', height: 'auto', margin: '1rem', color: 'white', padding: '1rem', boxSizing: 'border-box', backgroundColor: '#0AF'}}>
                             <div style={{width: '100%', fontSize: 'calc(0.6rem + 0.4vw)', marginBottom: '0.5rem', display: 'flex', justifyContent: 'flex-end'}}>{parseTimestamp(historyItem.timestamp)}</div>
                             <div style={{lineHeight: '1.5'}}>{historyItem.echo}</div>
                         </div>
                     ))}
+                    {derivedActivityLog.length === 0 && 
+                        <div style={{display: 'flex', flexWrap: 'wrap', height: 'auto', margin: '1rem', color: 'white', padding: '1rem', boxSizing: 'border-box', backgroundColor: '#0AF'}}>
+                            You don't currently have any history! But if you kick around here for a bit, you'll be sure to have some noteworthy deeds.
+                        </div>
+                        }
                     <div ref={activityLogRef} />
 
 

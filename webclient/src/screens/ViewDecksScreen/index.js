@@ -60,6 +60,7 @@ export default function ViewDecksScreen({ appState, setAppState, goHome }) {
 
     useEffect(() => {
         searchInputRef.current.focus();
+        setDeckSearch('');
     }, [viewOnlineDecks]);
 
 
@@ -143,11 +144,11 @@ const PublicDeckResultCard = ({ deckItem, index, addPublicDeck, alreadyOwned }) 
             <div style={{display: 'flex', width: '100%'}}>
                 {alreadyOwned ? (
                     <>
-                        <button disabled={true} style={{padding: '0.5rem 1rem', fontSize: '1.1rem', fontWeight: '600'}}>Already Owned</button>
+                        <button disabled={true} style={{padding: '0.5rem 1rem'}}>Already Owned</button>
                     </>
                 ) : (
                     <>
-                        <button onClick={() => addPublicDeck(deckItem.id)} style={{padding: '0.5rem 1rem', fontSize: '1.1rem', fontWeight: '600'}}>Add to My Decks</button>
+                        <button onClick={() => addPublicDeck(deckItem.id)} style={{padding: '0.5rem 1rem'}}>Add to My Decks</button>
                     </>
                 )}
                 
@@ -159,8 +160,15 @@ const PublicDeckResultCard = ({ deckItem, index, addPublicDeck, alreadyOwned }) 
 const MyDeckResultCard = ({ deckItem, viewDeck }) => {
     // kind of awkwardly double-dipping this for both local deck objects and the returned public search deck objects...
     // it 'works,' but it makes more sense to have a styled-component base for both and have them become separate components
+    const [deckStatusBorder, setDeckStatusBorder] = useState('1px solid hsl(240,80%,40%)');
+
+    useEffect(() => {
+        if (deckItem.variant) return setDeckStatusBorder('2px solid hsl(120,80%,60%)');
+        if (deckItem.published) return setDeckStatusBorder('2px solid hsl(40,90%,50%)');
+    }, []);
+
     return (
-        <div style={{width: '100%', border: '1px solid hsl(240,80%,40%)', borderRadius: '5px', boxSizing: 'border-box', padding: '1rem', backgroundColor: 'white'}}>
+        <div style={{width: '100%', border: deckStatusBorder, borderRadius: '5px', boxSizing: 'border-box', padding: '1rem', backgroundColor: 'white'}}>
             <h4 style={{margin: '0'}}>{deckItem.name} - {deckItem.cardTotal || deckItem.cards.length} cards</h4>
             <p>{deckItem.description}</p>
             <div style={{display: 'flex', width: '100%'}}>

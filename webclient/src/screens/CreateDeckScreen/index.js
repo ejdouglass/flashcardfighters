@@ -52,13 +52,12 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
             setNewDeck({...newestDeck, lastUpdateTime: new Date()});
             return setNewCard({id: undefined, prompt: '', explanation: '', style: {...newCard.style}});
         }
-        return alert(`BEEP BOOP. Need a prompt and explanation, please.`);
+        return setAppState({...appState, alertString: `Please enter a prompt and explanation for this new card!`});
     }
 
     function publishDeck() {
-        // This function should only be callable if the user has an appState.token; 
-        
         if (appState.token === undefined) return setAppState({...appState, alertString: `Gotta create a Profile before you can publish decks online.`});
+        if (newDeck.cards.length < 1) return setAppState({...appState, alertString: `Please don't publish an entirely empty deck online.`});
         
         // Since this is through a single-deck-editing screen, we can cheerfully only worry about the one deck present here for all uploading/updating considerations
         // NOTE: id may not be defined yet, which... causes issues, it seems? Maybe? Maybe not? Testing...
@@ -68,18 +67,8 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
                 // successful response handling here:
                 // console.log(`DECK PUBLISH DATA RETURN FROM API: ${JSON.stringify(res.data)}`);
                 if (res.data.success) {
-                    let newLogItem = {
-                        echo: `You published ${newDeck.name} to the Great Online Repository of Good and Lovely and Also Helpful Decks.`,
-                        timestamp: new Date(),
-                        event: 'deck_publish',
-                        subject: newDeck.id
-                    }
                    
-                    return setAppState({...res.data.userData, history: {
-                        ...appState.history,
-                        log: [...appState.history.log, newLogItem],
-                        actions: {...appState.history.actions, decksPublished: appState.history.actions.decksPublished + 1}
-                    }});
+                    return setAppState(res.data.userData);
                 } else {
                     if (res.data?.alertString) return setAppState({...appState, alertString: res.data.alertString});
                 }
@@ -90,7 +79,6 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
     function updateDeck() {
         axios.post('/deck/update', { token: appState.token, decksToUpdate: [{...newDeck}] })
             .then(res => {
-                // have to make sure lastPush 'saves' properly on the backend for the user, as well, hrm
                 setAppState(res.data.newAppState);
                 return setNewDeck({...newDeck, lastPush: res.data.timestamp});
             })
@@ -101,18 +89,10 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
         axios.post('/deck/unpublish', { token: appState?.token, deckID: newDeck.id })
             .then(res => {
                 if (res.data.success) {
-                    let newLogItem = {
-                        echo: `You unpublished ${newDeck.name}, removing it from the Great Online Repository.`,
-                        timestamp: new Date(),
-                        event: 'deck_creation',
-                        subject: newDeck.id
-                    }
+
                     
-                    setAppState({...appState, alertString: `You have successfully unpublished this deck. It is no longer shared online.`, history: {
-                        log: [...appState.history.log, newLogItem],
-                        actions: {...appState.history.actions, decksUnpublished: appState.history.decksUnpublished + 1}
-                    }});
-                    return setNewDeck({...newDeck, published: false, lastPush: undefined});
+                    return setAppState(res.data.userData);
+                    setNewDeck({...newDeck, published: false, lastPush: undefined});
                 }
             })
             .catch(err => console.log(`Error unpublishing this deck: ${err}`))
@@ -193,6 +173,13 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
         }
     }, [newDeck.published]);
 
+    useEffect(() => {
+        if (newDeck.name.length > 19) {
+            setNewDeck({...newDeck, name: newDeck.name.substring(0, newDeck.name.length - 1)});
+            setAppState({...appState, alertString: `Please keep the deck name under 20 characters, for entirely arbitrary reasons.`});
+        }
+    }, [newDeck.name]);
+
 
     return (
         
@@ -202,27 +189,24 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
 
             <div id="deckStuffHolder" style={{display: 'flex', flexWrap: 'wrap', flexDirection: 'column', width: '100%'}}>
 
-                <div style={{display: 'flex', width: '100%', fontSize: '1.4rem', fontWeight: '600'}}>
-                    Deck Summary
-                </div>
 
                 <div style={{display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '1rem'}}>
 
-                    <div id="deckPreview" style={{boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', textAlign: 'center', height: '198px', backgroundColor: '#0AF', borderRadius: '5%'}}>
-                        <input type='text' value={newDeck.name} style={{fontSize: '1rem', textAlign: 'center'}} autoFocus={newDeck.name.length === 0} placeholder={`Nameless Deck #${Object.keys(appState.decks).length + 1}`} onChange={e => setNewDeck({...newDeck, name: e.target.value})} />
-                        <div style={{color: 'white', fontSize: '1.2rem', fontWeight: '600'}}>Card Total: {newDeck.cards.length}</div>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '0.5rem'}}>
+                        <input type='text' value={newDeck.name} style={{fontSize: '1rem'}} autoFocus={newDeck.name.length === 0} placeholder={`Deck Name`} onChange={e => setNewDeck({...newDeck, name: e.target.value})} />
+                        
                     </div>
 
-                    <div style={{display: 'flex', gap: '1rem'}}>                
-                        <textarea type='text' rows={5} placeholder={'Deck Description'} style={{boxSizing: 'border-box', resize: 'none', fontSize: '1.2rem', padding: '0.5rem 1rem', fontFamily: 'sans-serif'}} value={newDeck.description} onChange={e => setNewDeck({...newDeck, description: e.target.value})} />
-                    </div>
+                    {/* <div style={{display: 'flex', gap: '1rem'}}>                
+                        <textarea type='text' rows={5} placeholder={'Deck Description'} style={{boxSizing: 'border-box', resize: 'none', fontSize: '1rem', padding: '0.5rem 1rem', fontFamily: 'sans-serif'}} value={newDeck.description} onChange={e => setNewDeck({...newDeck, description: e.target.value})} />
+                    </div> */}
 
-                    <div id="deckButtonsOne" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                        <button onClick={deleteDeck}>DELETE THIS DECK</button>
+                    <div id="deckButtonsOne" style={{display: 'flex', flexDirection: 'row', alignSelf: 'flex-start', gap: '1rem'}}>
+                        <button onClick={deleteDeck}>DELETE</button>
                         {newDeck.published ? (
-                            <button onClick={updateDeck} disabled={!appState.username}>UPDATE THIS DECK</button>
+                            <button onClick={updateDeck} disabled={!appState.username}>UPDATE</button>
                         ) : (
-                            <button onClick={() => publishDeck()} disabled={!appState.username}>PUBLISH THIS DECK</button>
+                            <button onClick={() => publishDeck()} disabled={!appState.username}>PUBLISH</button>
                         )}
                         
                     </div>
@@ -248,20 +232,27 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
                         {/* Aha! Finally got the right combination of factors to allow card-resizing. Hoo boy. Ensure a max-width so the horizontal swelling is bounded. */}
                         <div id='newCardSingle' style={{minHeight: '300px', width: 'calc(150px + 30vw)', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', borderRadius: '10px', backgroundColor: '#0AF'}}>
                             
-                            <div id='topOfNewCard' style={{border: '1px solid black', boxSizing: 'border-box', minHeight: '30%', width: '100%', textAlign: 'center', backgroundColor: '#07D', color: 'white', borderRadius: '10px 10px 0 0'}}>
-                                <textarea ref={promptRef} type='text' style={{boxSizing: 'border-box', color: 'white', width: '100%', outline: 'none', border: 'none', backgroundColor: 'transparent', textAlign: 'center', padding: '0.5rem 1rem', fontFamily: 'sans-serif', resize: 'none', fontSize: '1.2rem'}} ref={promptRef} value={newCard.prompt} onChange={e => setNewCard({...newCard, prompt: e.target.value})} placeholder={'Card Front/Prompt'} />
+                            <div id='topOfNewCard' onClick={() => promptRef.current.focus()} style={{position: 'relative', border: '1px solid black', boxSizing: 'border-box', height: '30%', width: '100%', textAlign: 'center', backgroundColor: '#07D', color: 'white', borderRadius: '10px 10px 0 0'}}>
+                                <textarea ref={promptRef} type='text' style={{boxSizing: 'border-box', color: 'white', width: '100%', outline: 'none', border: 'none', backgroundColor: 'transparent', textAlign: 'center', padding: '0.5rem 1rem', fontFamily: 'sans-serif', resize: 'none', fontSize: 'calc(1rem + 0.2vw)'}} ref={promptRef} value={newCard.prompt} onChange={e => setNewCard({...newCard, prompt: e.target.value})} />
+                                <div style={{position: 'absolute', display: 'flex', justifyContent: 'center', width: '200px', height: '50px', left: 'calc(50% - 100px)', top: 'calc(50% - 25px)', fontSize: 'calc(1rem + 0.2vw)', fontWeight: '600'}}>{newCard.prompt ? '' : `(Prompt)`}</div>
                             </div>
 
-                            <div id='bottomOfNewCard' onClick={() => explanationRef.current.focus()} style={{display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', boxSizing: 'border-box', width: '100%', color: 'white', fontSize: '1rem', minHeight: '150px', fontWeight: '600', position: 'relative'}}>
-                                <p style={{resize: 'none', display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', color: 'white', fontSize: '1rem', fontWeight: '600', boxSizing: 'border-box', height: '100%', width: '100%', padding: '0', margin: '0', backgroundColor: 'black', zIndex: '9'}} >{newCard.explanation}</p>
-                                <input ref={explanationRef} onChange={e => setNewCard({...newCard, explanation: e.target.value})} type='text' style={{opacity: '0', position: 'absolute', resize: 'none', display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', color: 'white', fontSize: '1rem', fontWeight: '600', boxSizing: 'border-box', height: '100%', width: '100%', padding: '0', margin: '0', background: 'transparent'}} />
-                                {/* <textarea type='text' ref={explanationRef} style={{position: 'absolute', width: '100%', height: '100%', background: 'transparent', border: 'none', resize: 'none'}} value={''} onKeyDown={e => doShenanigans(e)} />
-                                <div style={{position: 'absolute', width: '100%', minHeight: '100px', border: '1px solid red'}}>{newCard.explanation || `Card Back/Explanation`}</div> */}
+                            <div id='bottomOfNewCard' onClick={() => explanationRef.current.focus()} style={{display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', boxSizing: 'border-box', width: '100%', color: 'white', fontSize: '1rem', minHeight: '150px', height: '235px', fontWeight: '600', position: 'relative'}}>
+                                {/* <div style={{resize: 'none', display: 'flex', whiteSpace: 'pre-wrap', justifyContent: 'flex-start', alignItems: 'flex-start', color: 'white', fontSize: '1rem', fontWeight: '600', boxSizing: 'border-box', height: '100%', width: '100%', padding: '1rem', borderRadius: '10px', margin: '0', backgroundColor: '#0AF'}}>
+                                    {newCard.explanation}
+                                    <div id="blinkline" style={{display: 'inline-block', fontFamily: 'sans-serif', fontWeight: '100', fontSize: '1.2rem'}}>I</div>
+                                </div> */}
+                                <textarea ref={explanationRef} value={newCard.explanation} onChange={e => setNewCard({...newCard, explanation: e.target.value})} type='text' style={{opacity: '1', fontFamily: 'sans-serif', outline: 'none', border: 'none', position: 'absolute', resize: 'none', display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', color: 'white', fontSize: '1rem', fontWeight: '600', boxSizing: 'border-box', height: '100%', width: '100%', padding: '1rem', margin: '0', background: 'transparent'}} />
+                                <div style={{position: 'absolute', display: 'flex', width: '200px', left: '1rem', top: '1rem', fontSize: 'calc(1rem + 0.2vw)', fontWeight: '600'}}>{newCard.explanation ? '' : `(Explanation)`}</div>
                             </div>
 
                         </div>
 
-                        <button style={{padding: '0.5rem 1rem', fontSize: '1.2rem', fontWeight: '600'}} onClick={createNewCard}>Create Card</button>
+                        <button onClick={createNewCard}>CREATE CARD</button>
+
+
+                        {/* REFIT: some sort of 'mode toggle' somewhere rather than jamming the page full of whatnots */}
+                        <div style={{fontSize: 'calc(0.8rem + 0.2vw)', fontWeight: '600'}}>Card Total: {newDeck.cards.length}</div>
 
                         {newDeck.cards.length > 0 ? (
                             <div style={{display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', width: '100%'}}>
@@ -271,8 +262,8 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
                                 {newDeck.cards.filter(card => cardSearch.length > 0 ? (card.prompt.includes(cardSearch) || card.explanation.includes(cardSearch)) : card).map((card, index) => (
                                     // this is prooooobably getting nuanced enough to warrant its own component in the near future (and can read the cardstock/etc.)
                                     <div key={index} style={{borderRadius: '10px', display: 'flex', flexDirection: 'column', width: '330px', height: '198px', backgroundColor: '#0AF', color: 'white'}}>
-                                        <textarea style={{outline: 'none', height: '35%', borderRadius: '10px 10px 0 0', paddingTop: '0.5rem', color: 'white', background: '#07D', border: '1px solid black', fontSize: '1.2rem', fontWeight: '600', letterSpacing: '0.5px', textAlign: 'center', resize: 'none', fontFamily: 'sans-serif'}} onChange={(e) => handleCardUpdate(index, e.target.value, 'prompt')} value={card.prompt} />
-                                        <textarea style={{outline: 'none', paddingTop: '0.5rem', borderRadius: '0 0 10px 10px', height: '100%', color: 'white', background: 'transparent', border: 'none', fontSize: '1.2rem', fontWeight: '500', textAlign: 'center', resize: 'none', fontFamily: 'sans-serif'}} onChange={(e) => handleCardUpdate(index, e.target.value, 'explanation')} value={card.explanation} />
+                                        <textarea style={{outline: 'none', height: '35%', borderRadius: '10px 10px 0 0', paddingTop: '0.5rem', color: 'white', background: '#07D', border: '1px solid black', fontSize: 'calc(0.8rem + 0.4vw)', fontWeight: '600', letterSpacing: '0.5px', textAlign: 'center', resize: 'none', fontFamily: 'sans-serif'}} onChange={(e) => handleCardUpdate(index, e.target.value, 'prompt')} value={card.prompt} />
+                                        <textarea style={{outline: 'none', paddingTop: '0.5rem', borderRadius: '0 0 10px 10px', height: '100%', color: 'white', background: 'transparent', border: 'none', fontSize: 'calc(0.8rem + 0.4vw)', fontWeight: '500', textAlign: 'center', resize: 'none', fontFamily: 'sans-serif'}} onChange={(e) => handleCardUpdate(index, e.target.value, 'explanation')} value={card.explanation} />
                                     </div>
                                 ))}
                             </div>
@@ -282,53 +273,6 @@ export default function CreateDeckScreen({ appState, setAppState , generateRando
 
                 </div>
 
-{/* 
-                {deckScreenMode === 'createCards' &&
-
-                    <div style={{display: 'flex', flexDirection: 'column', width: '100%', justifyContent: 'center', alignItems: 'center', gap: '1rem', border: '1px solid purple'}}>
-
-
-                        <div id="newCardSidesContainer" style={{display: 'flex', width: '100%', justifyContent: 'center', alignItems: 'center', gap: '1rem'}}>
-                            <div id="cardFront" style={{display: 'flex', gap: '1rem', flexDirection: 'column', justifyContent: 'center', borderRadius: '5%', width: '500px', height: '300px', backgroundColor: 'hsl(60,30%,95%)'}}>
-                                <textarea type='text' style={{outline: 'none', border: 'none', backgroundColor: 'transparent', textAlign: 'center', padding: '0.5rem 1rem', fontFamily: 'sans-serif', resize: 'none', fontSize: '1.2rem'}} ref={promptRef} value={newCard.prompt} onChange={e => setNewCard({...newCard, prompt: e.target.value})} placeholder={'Card Front/Prompt'} />
-                            </div>
-
-                            <div id="cardBack" style={{display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRadius: '5%', width: '500px', height: '300px', backgroundColor: 'hsl(60,30%,95%)'}}>
-                                <textarea type='text' rows={3 + Math.floor(newCard.explanation.length / 50)} style={{outline: 'none', border: 'none', backgroundColor: 'transparent', textAlign: 'center', padding: '0.5rem 1rem', fontFamily: 'sans-serif', resize: 'none', fontSize: '1.2rem'}} value={newCard.explanation} onChange={e => setNewCard({...newCard, explanation: e.target.value})} placeholder={'Card Back/Explanation'} />
-                            </div>                        
-                        </div>
-
-                        
-
-                        <button onClick={createNewCard} style={{padding: '0.5rem 1rem', fontWeight: '600', fontSize: '1rem', width: '20%'}}>Create New Card</button>
-
-
-                    </div>                
-                }
-
-                {deckScreenMode === 'browseCards' &&
-                    <div ref={promptRef} style={{display: 'flex', flexDirection: 'row', justifyContent: 'flex-start', gap: '1rem', padding: '1rem', border: '1px solid purple'}}>
-                        {newDeck.cards.length > 0 ? (
-                            <div style={{display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', width: '100%'}}>
-                                <div style={{display: 'flex', gap: '1rem', width: '100%'}}>
-                                    <input type='text' style={{padding: '0.5rem 1rem', width: '200px'}} placeholder={'Search Cards'} value={cardSearch} onChange={e => setCardSearch(e.target.value)} />
-                                    <button style={{padding: '0.5rem 1rem', backgroundColor: cardViewMode === 'prompt' ? 'hsl(150,80%,70%)' : '#DDD'}} onClick={() => setCardViewMode('prompt')}>Prompt</button>
-                                    <button style={{padding: '0.5rem 1rem', backgroundColor: cardViewMode === 'explanation' ? 'hsl(150,80%,70%)' : '#DDD'}} onClick={() => setCardViewMode('explanation')}>Explanation</button>
-                                </div>
-                                {newDeck.cards.filter(card => cardSearch.length > 0 ? (card.prompt.includes(cardSearch) || card.explanation.includes(cardSearch)) : card).map((card, index) => (
-                                    // this is prooooobably getting nuanced enough to warrant its own component in the near future (and can read the cardstock/etc.)
-                                    <div key={index} style={{borderRadius: '10px', display: 'flex', flexDirection: 'column', width: '300px', height: '180px', backgroundColor: '#0AF', color: 'white'}}>
-                                        <textarea style={{outline: 'none', borderRadius: '10px 10px 0 0', paddingTop: '0.5rem', color: 'white', background: '#07D', border: '1px solid black', fontSize: '1.2rem', fontWeight: '600', letterSpacing: '0.5px', textAlign: 'center', resize: 'none', fontFamily: 'sans-serif'}} onChange={(e) => handleCardUpdate(index, e.target.value, 'prompt')} value={card.prompt} />
-                                        <textarea style={{outline: 'none', borderRadius: '0 0 10px 10px', height: '100%', color: 'white', background: 'transparent', border: 'none', fontSize: '1.2rem', fontWeight: '500', textAlign: 'center', resize: 'none', fontFamily: 'sans-serif'}} onChange={(e) => handleCardUpdate(index, e.target.value, 'explanation')} value={card.explanation} />
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <h1>NO CARDS YET</h1>
-                        )}
-                    </div>
-                }
-                 */}
 
             </div>
 
